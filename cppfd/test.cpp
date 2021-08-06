@@ -19,12 +19,10 @@ int main(int argc, char** argv) {
   auto i = m.cartesian_to_index(c[0], c[1], 5, 5);
   std::cout<<i<<std::endl;
 
-  m.create_pressure_data_storage();
   m.set_pressure(0, 0, 5);
   double p = m.get_pressure(0, 0);
   std::cout<<p<<std::endl;
 
-  m.create_velocity_data_storage();
   m.set_velocity_u(0, 0, 3.2);
   m.set_velocity_v(0, 0, 7.5);
   double u = m.get_velocity_u(0, 0);

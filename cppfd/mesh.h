@@ -17,8 +17,11 @@ class Mesh
       n_cells_y{ n_y },
       O{0, 0},
       h{cell_size}
-    {}
-
+    {
+      // instantiate containers for velocity and pressure
+      this->pressure = Kokkos::View<double*>("pressure", n_x * n_y);
+      this->velocity = Kokkos::View<double*[2]>("velocity", (n_x + 1) * (n_y + 1));
+    }
 
     // setter/getter for physical cell size
     void set_cell_size(double size){this->h = size;};
@@ -27,10 +30,6 @@ class Mesh
     // setter/getter for physical origin member variable
     void set_origin(double x, double y);
     std::array<double,2> get_origin(){return this->O;};
-
-    // getters for size characteristics of the mesh member variables
-    int get_n_points(){return this->n_points;};
-    int get_n_cells(){return this->n_cells;};
 
     // setters/getters for number of mesh cells in each dimension
     void set_n_cells_x(int n_x){this->n_cells_x = n_x;};
@@ -55,10 +54,6 @@ class Mesh
     double get_velocity_u(int i, int j);
     double get_velocity_v(int i, int j);
 
-    // create Views with the correct extent for pressure and velocity data
-    void create_pressure_data_storage();
-    void create_velocity_data_storage();
-
   private:
     // physical origin f the mesh
     std::array<double,2> O;
@@ -74,6 +69,4 @@ class Mesh
 
     // mesh point data
     Kokkos::View<double*[2]> velocity = {};
-
-
 };
