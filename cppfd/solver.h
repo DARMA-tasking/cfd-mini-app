@@ -10,6 +10,7 @@
 class Solver
 {
   public:
+    Solver(Mesh m, double d_t, double t_f, double r, double d_v, double m_C, int v = 1);
     void set_nu(double n){this->nu = n;};
     double get_nu(){return this->nu;};
     void set_rho(double r){this->rho = r;};
@@ -19,17 +20,18 @@ class Solver
     void set_t_final(double t_f){this->t_final = t_f;};
     double get_t_final(){return this->t_final;};
 
-    void set_verbose_level(std::string v){this->verbose = v;};
-    std::string get_verbose_level(){return this->verbose;};
-
   private:
+    // assemble Laplacian matrix for Poisson solver
+    void assemble_laplacian();
+
     // mesh object to be worked on
-    Mesh m;
+    Mesh mesh;
 
     // physics and simulation control related variables
     double nu, rho, delta_t, t_final, max_C;
-    std::string verbose;
+    int verbosity;
 
-    // laplacian matrix
+    // laplacian matrix and its inverse
     Kokkos::View<double**> laplacian = {};
+    Kokkos::View<double**> laplacian_inv = {};
 };

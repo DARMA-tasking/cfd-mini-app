@@ -85,7 +85,7 @@ void Mesh::create_velocity_data_storage()
 
 void Mesh::set_velocity_u(int i, int j, double u)
 {
-  int k = this->cartesian_to_index(i, j, this->n_points_x, this->n_points_y);
+  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1)
   {
     this->velocity(k, 0) = u;
@@ -94,7 +94,7 @@ void Mesh::set_velocity_u(int i, int j, double u)
 
 void Mesh::set_velocity_v(int i, int j, double v)
 {
-  int k = this->cartesian_to_index(i, j, this->n_points_x, this->n_points_y);
+  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1)
   {
     this->velocity(k, 1) = v;
@@ -103,7 +103,7 @@ void Mesh::set_velocity_v(int i, int j, double v)
 
 double Mesh::get_velocity_u(int i, int j)
 {
-  int k = this->cartesian_to_index(i, j, this->n_points_x, this->n_points_y);
+  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1)
   {
     return this->velocity(k, 0);
@@ -112,7 +112,7 @@ double Mesh::get_velocity_u(int i, int j)
 
 double Mesh::get_velocity_v(int i, int j)
 {
-  int k = this->cartesian_to_index(i, j, this->n_points_x, this->n_points_y);
+  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1)
   {
     return this->velocity(k, 1);

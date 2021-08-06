@@ -8,8 +8,21 @@
 class Mesh
 {
   public:
-    // default constructor
-    Mesh() = default;
+    // delete default constructor
+    Mesh() = delete;
+
+    // initialization constructor
+    Mesh(int n_x, int n_y, double cell_size)
+      : n_cells_x{ n_x },
+      n_cells_y{ n_y },
+      O{0, 0},
+      h{cell_size}
+    {}
+
+
+    // setter/getter for physical cell size
+    void set_cell_size(double size){this->h = size;};
+    double get_cell_size(){return this->h;};
 
     // setter/getter for physical origin member variable
     void set_origin(double x, double y);
@@ -19,16 +32,15 @@ class Mesh
     int get_n_points(){return this->n_points;};
     int get_n_cells(){return this->n_cells;};
 
-    // setters/getters for dimension characteristics of the mesh member variables
+    // setters/getters for number of mesh cells in each dimension
     void set_n_cells_x(int n_x){this->n_cells_x = n_x;};
     void set_n_cells_y(int n_y){this->n_cells_y = n_y;};
     int get_n_cells_x(){return this->n_cells_x;};
     int get_n_cells_y(){return this->n_cells_y;};
 
-    void set_n_points_x(int n_x){this->n_points_x = n_x;};
-    void set_n_points_y(int n_y){this->n_points_y = n_y;};
-    int get_n_points_x(){return this->n_points_x;};
-    int get_n_points_y(){return this->n_points_y;};
+    // only getters for number of points which depend on number of cells
+    int get_n_points_x(){return this->n_cells_x + 1;};
+    int get_n_points_y(){return this->n_cells_y + 1;};
 
     // coordinate systems converters
     std::array<int,2> index_to_cartesian(int k, int n, int nmax);
@@ -43,7 +55,7 @@ class Mesh
     double get_velocity_u(int i, int j);
     double get_velocity_v(int i, int j);
 
-    // workaround to create Views with the correct extent for pressure and velocity data
+    // create Views with the correct extent for pressure and velocity data
     void create_pressure_data_storage();
     void create_velocity_data_storage();
 
@@ -52,7 +64,7 @@ class Mesh
     std::array<double,2> O;
 
     // dimension characteristics of the mesh
-    int n_points, n_cells, n_cells_x, n_cells_y, n_points_x, n_points_y;
+    int n_points, n_cells, n_cells_x, n_cells_y;
 
     // physical cell size
     double h;

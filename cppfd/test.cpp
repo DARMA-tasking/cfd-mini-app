@@ -5,12 +5,12 @@
 
 int main(int argc, char** argv) {
   Kokkos::ScopeGuard kokkos(argc, argv);
-  Mesh m;
-  m.set_origin(0.1, 0.5);
-  m.set_n_cells_x(10);
-  m.set_n_cells_y(10);
-  m.set_n_points_x(11);
-  m.set_n_points_y(11);
+  Mesh m(10, 10, 0.1);
+  // m.set_origin(0.1, 0.5);
+  // m.set_n_cells_x(10);
+  // m.set_n_cells_y(10);
+  // m.set_n_points_x(11);
+  // m.set_n_points_y(11);
 
   auto o = m.get_origin();
   std::cout<<o[0]<<" "<<o[1]<<std::endl;
@@ -18,7 +18,6 @@ int main(int argc, char** argv) {
   std::cout<<c[0]<<" "<<c[1]<<std::endl;
   auto i = m.cartesian_to_index(c[0], c[1], 5, 5);
   std::cout<<i<<std::endl;
-  std::cout<<m.get_n_cells_x()<<std::endl;
 
   m.create_pressure_data_storage();
   m.set_pressure(0, 0, 5);
