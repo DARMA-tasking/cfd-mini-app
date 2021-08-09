@@ -1,32 +1,53 @@
 #include<iostream>
 #include<array>
+#include<map>
 #include<Kokkos_Core.hpp>
 #include"mesh.cpp"
+#include"boundaryconditions.cpp"
+#include"solver.cpp"
 
 int main(int argc, char** argv) {
   Kokkos::ScopeGuard kokkos(argc, argv);
-  Mesh m(10, 10, 0.1);
-  // m.set_origin(0.1, 0.5);
-  // m.set_n_cells_x(10);
-  // m.set_n_cells_y(10);
-  // m.set_n_points_x(11);
-  // m.set_n_points_y(11);
+  double density = 1.225;
+  double dynamic_viscosity = 0.001;
+  double delta_t = 0.001;
+  double t_final = 0.02;
+  double max_C = 0.5;
+  Mesh mesh(10, 10, 0.1);
 
-  auto o = m.get_origin();
+
+  auto o = mesh.get_origin();
   std::cout<<o[0]<<" "<<o[1]<<std::endl;
-  auto c = m.index_to_cartesian(6, 5, 25);
+  auto c = mesh.index_to_cartesian(6, 5, 25);
   std::cout<<c[0]<<" "<<c[1]<<std::endl;
-  auto i = m.cartesian_to_index(c[0], c[1], 5, 5);
+  auto i = mesh.cartesian_to_index(c[0], c[1], 5, 5);
   std::cout<<i<<std::endl;
 
-  m.set_pressure(0, 0, 5);
-  double p = m.get_pressure(0, 0);
+  mesh.set_pressure(0, 0, 5);
+  double p = mesh.get_pressure(0, 0);
   std::cout<<p<<std::endl;
 
-  m.set_velocity_u(0, 0, 3.2);
-  m.set_velocity_v(0, 0, 7.5);
-  double u = m.get_velocity_u(0, 0);
-  double v = m.get_velocity_v(0, 0);
+  mesh.set_velocity_u(0, 0, 3.2);
+  mesh.set_velocity_v(0, 0, 7.5);
+  double u = mesh.get_velocity_u(0, 0);
+  double v = mesh.get_velocity_v(0, 0);
   std::cout<<u<<", "<<v<<std::endl;
+
+  std::map<std::string, double> velocity_values = {
+                                                  {"u_top", 1.0},
+                                                  {"v_top", 0.0},
+                                                  {"u_bot", 0.0},
+                                                  {"v_bot", 0.0},
+                                                  {"u_left", 0.0},
+                                                  {"v_left", 0.0},
+                                                  {"u_right", 0.0},
+                                                  {"v_right", 0.0}
+                                                };
+
+  Solver solver(mesh, delta_t, t_final, density, dynamic_viscosity, max_C);
+  BoundaryConditions b_c(mesh, velocity_values);
+  solver.solve(b_c);
+  std::cout<<mesh.get_velocity_u(5, 10)<<std::endl;
+
   return 0;
 }

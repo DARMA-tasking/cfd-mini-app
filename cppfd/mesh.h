@@ -54,6 +54,9 @@ class Mesh
     double get_velocity_u(int i, int j);
     double get_velocity_v(int i, int j);
 
+    // setter to assign new mesh point data
+    void set_mesh_velocities(Kokkos::View<double*[2]> new_velocities){this->velocity = new_velocities;};
+
   private:
     // physical origin f the mesh
     std::array<double,2> O;
