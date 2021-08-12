@@ -14,7 +14,7 @@ for r in A:
 print("  eigenvalues:", ", ".join(["{:.6g}".format(e) for e in np.linalg.eigvals(A)]))
 print("  rank:", np.linalg.matrix_rank(A))
 
-kerA = sp.linalg.null_space(A) 
+kerA = sp.linalg.null_space(A)
 print("  nullspace:")
 for r in kerA:
     print("   ", r)
