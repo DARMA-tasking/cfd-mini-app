@@ -1,3 +1,10 @@
+This is the repository for the Kokkos-based CFD mini app.
+
+# Capabilities
+
+* This CFD mini app is a solver for structured 2-dimensional grid meshes for incompressible fluid flow, using a finite difference method.
+* The pressure boundary condition is a zero flux Neumann condition. Velocity boundary conditions are Dirichlet type conditions, the boundary velocity values are given to the solver through a map of values.
+
 # DARMA-tasking template repository
 
 Template repository with base configuration.
