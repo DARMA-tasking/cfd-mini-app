@@ -11,8 +11,21 @@
 class BoundaryConditions
 {
   public:
+    // delete default constructor
+    BoundaryConditions() = delete;
+
     // constructor
-    BoundaryConditions(Mesh& m, std::map<std::string, double> velocity_values);
+    BoundaryConditions(Mesh& m, std::map<std::string, double> velocity_values)
+      : mesh(m)
+      , u_top(velocity_values["u_top"])
+      , v_top(velocity_values["v_top"])
+      , u_bot(velocity_values["u_bot"])
+      , v_bot(velocity_values["v_bot"])
+      , u_left(velocity_values["u_left"])
+      , v_left(velocity_values["v_left"])
+      , u_right(velocity_values["u_right"])
+      , v_right(velocity_values["v_right"])
+      {}
 
     // set values at boundaries of fluid domain
     void apply_velocity_bc();

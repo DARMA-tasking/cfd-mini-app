@@ -44,9 +44,9 @@ int main(int argc, char** argv) {
                                                   {"v_right", 0.0}
                                                 };
 
-  Solver solver(mesh, delta_t, t_final, density, dynamic_viscosity, max_C);
   BoundaryConditions b_c(mesh, velocity_values);
-  solver.solve(b_c);
+  Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
+  solver.solve();
   std::cout<<mesh.get_velocity_u(5, 10)<<std::endl;
 
   return 0;
