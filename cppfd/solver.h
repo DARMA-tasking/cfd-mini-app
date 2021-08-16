@@ -41,6 +41,15 @@ class Solver
     // compute predicted velocities without pressure term
     void predict_velocity();
 
+    // build poisson equation right hand side vector
+    void assemble_poisson_RHS();
+
+    // solve poisson pressure equation using conjugate gradient method
+    void poisson_solve_pressure();
+
+    // apply corrector step
+    void correct_velocity();
+
     // compute courant number in a certain cell
     double compute_cell_courant_number(int i, int j);
 
@@ -57,6 +66,9 @@ class Solver
     // laplacian matrix and its inverse
     Kokkos::View<double**> laplacian = {};
     Kokkos::View<double**> laplacian_inv = {};
+
+    // poisson equation right hand side vector
+    Kokkos::View<double*[1]> RHS = {};
 
     // boundary conditions
     BoundaryConditions boundary_conditions;
