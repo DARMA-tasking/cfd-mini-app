@@ -4,8 +4,17 @@ import numpy as np
 import scipy as sp
 from scipy import linalg
 
-A = np.array([[-2,1,1,0],[1,-2,0,1],[1,0,-2,1],[0,1,1,-2]])
-b = np.array([1, -1, 1, -1])
+A = np.array([
+    [-2,1,0,1,0,0,0,0,0],
+    [1,-3,1,0,1,0,0,0,0],
+    [0,1,-2,0,0,1,0,0,0],
+    [1,0,0,-3,1,0,1,0,0],
+    [0,1,0,1,-4,1,0,1,0],
+    [0,0,1,0,1,-3,0,0,1],
+    [0,0,0,1,0,0,-2,1,0],
+    [0,0,0,0,1,0,1,-3,1],
+    [0,0,0,0,0,1,0,1,-2]])
+b = np.array([1, 1, 1, 1, 0, -1, -1, -1, -1])
 
 # Provide some information
 print("# matrix:")
@@ -21,7 +30,7 @@ for r in kerA:
 
 # Initialize containers and values
 print("# intialization:")
-x = np.array([0., 0., 0., 0.])
+x = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])
 print("  initial guess:", x)
 
 residuals = [b - A @ x]
