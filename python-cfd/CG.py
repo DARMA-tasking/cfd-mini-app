@@ -57,10 +57,11 @@ for k in range(min(A.shape)):
     # Update residual
     residuals.append(b - A @ x)
     new_rms2 = residuals[kp1] @ residuals[kp1]
-    print("  residual:{} (L2 norm: {})".format(residuals[kp1], new_rms2))
+    print("  residual:{} (L2 norm: {})".format(
+        residuals[kp1], math.sqrt(new_rms2)))
 
     # Terminate early when possible
-    if new_rms2 < 1e-12:
+    if new_rms2 < 1e-8:
         print("# CG converged to solution: {} with residual norm: {}".format(
             x, math.sqrt(new_rms2)))
         sys.exit(0)
@@ -73,3 +74,9 @@ for k in range(min(A.shape)):
 
     # Update residual squared L2
     rms2 = new_rms2
+
+# Print results
+print("# results:")
+print("  approximate solution:", x)
+print("  RMS error:", np.linalg.norm(b - A @ x))
+
