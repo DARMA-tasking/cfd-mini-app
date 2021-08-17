@@ -16,7 +16,7 @@ A = np.array([
     [0,0,0,0,0,1,0,1,-2]])
 b = np.array([1, 1, 1, 1, 0, -1, -1, -1, -1])
 
-# Provide some information
+# Provide some information: not necessary to the method
 print("# matrix:")
 for r in A:
     print("   ", r)
@@ -28,18 +28,20 @@ print("  nullspace:")
 for r in kerA:
     print("   ", r)
 
+
+##### Actual solver starts here #####
+
 # Initialize containers and values
 print("# intialization:")
 x = np.array([0., 0., 0., 0., 0., 0., 0., 0., 0.])
 print("  initial guess:", x)
 
-residuals = [b - A @ x]
-rms2 = residuals[0] @ residuals[0]
-print("  residual:{} (L2 norm: {})".format(residuals[0], rms2))
+residual = b - A @ x
+rms2 = residual @ residual
+print("  RMS error:", math.sqrt(rms2))
 
-directions = residuals[:]
+directions = [residual]
 print("  directions", [list(d) for d in directions])
-alpha, beta = [], []
 
 # Iterate
 for k in range(min(A.shape)):
@@ -47,18 +49,17 @@ for k in range(min(A.shape)):
     print("# iteration:", kp1)
 
     # Compute step
-    alpha.append(rms2 / (directions[k] @ A @ directions[k]))
-    print("  alpha[{}]: {}".format(k, alpha[k]))
+    alpha = rms2 / (directions[k] @ A @ directions[k])
+    print("  alpha[{}]: {}".format(k, alpha))
 
     # Update solution
-    x += alpha[k] * directions[k]
+    x += alpha * directions[k]
     print("  updated solution:", x)
 
     # Update residual
-    residuals.append(b - A @ x)
-    new_rms2 = residuals[kp1] @ residuals[kp1]
-    print("  residual:{} (L2 norm: {})".format(
-        residuals[kp1], math.sqrt(new_rms2)))
+    residual = b - A @ x
+    new_rms2 = residual @ residual
+    print("  RMS error:", math.sqrt(new_rms2))
 
     # Terminate early when possible
     if new_rms2 < 1e-8:
@@ -67,16 +68,10 @@ for k in range(min(A.shape)):
         sys.exit(0)
 
     # Compute new direction
-    beta.append(new_rms2 / rms2)
-    print("  beta[{}]: {}".format(k, beta[k]))
-    directions.append(residuals[kp1] - beta[k] * directions[k])
-    print("  directions", [list(d) for d in directions])
+    beta = new_rms2 / rms2
+    print("  beta[{}]: {}".format(k, beta))
+    directions.append(residual - beta * directions[k])
+    print("  new direction:", directions[-1])
 
     # Update residual squared L2
     rms2 = new_rms2
-
-# Print results
-print("# results:")
-print("  approximate solution:", x)
-print("  RMS error:", np.linalg.norm(b - A @ x))
-
