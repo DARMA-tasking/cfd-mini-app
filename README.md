@@ -1,10 +1,11 @@
-# DARMA-tasking template repository
+This is the repository for the Kokkos-based CFD mini app.
 
-Template repository with base configuration.
+# Capabilities
 
-Included workflows:
-* [*check-pr-fixes-issue*](https://github.com/DARMA-tasking/check-pr-fixes-issue) - checking if PR description contains phrase "Fixes #issue", and if PR title, description and branch mention the same issue number
-* [*find-unsigned-commits*](https://github.com/DARMA-tasking/find-unsigned-commits) - checking if there are any unsigned commits in PR
-* [*find-trailing-whitespace*](https://github.com/DARMA-tasking/find-trailing-whitespace) - checking if there are any trailing whitespaces in files
-* [*check-commit-format*](https://github.com/DARMA-tasking/check-commit-format) - checking if commit message is properly formatted - either starts with "*Merge ...*" or fullfils template: "*#issue_number: short commit description*"
-* [*action-git-diff-check*](https://github.com/joel-coffman/action-git-diff-check) - checking if changes introduce conflict markers or whitespace errors
+* This CFD mini app is a solver for structured 2-dimensional grid meshes for incompressible fluid flow, using:
+  * a finite difference method for the spatial discretization (with 5-point stencil for the Laplacian);
+  * a conjugate gradient linear solve for the Poisson pressure equation;
+  * explicit Euler time integration with adaptive time-stepping.
+* The boundary conditions are as follows:
+  * pressure (cell-centered): zero-flow von Neumann condition;
+  * velocity (vertex-centered): Dirichlet conditions, with the boundary velocity values given to the solver through a map of values.
