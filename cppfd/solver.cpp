@@ -3,7 +3,7 @@
 #include"solver.h"
 
 // main function to solve N-S equation on time steps
-void Solver::solve(){
+void Solver::solve(stopping_point s_p){
   // begin simulation
   if(this->verbosity >= 1){
     std::cout<<"Initial timestep : " << this->delta_t << ", " << "Time final : " << this->t_final <<std::endl;
@@ -34,6 +34,9 @@ void Solver::solve(){
   if(this->verbosity > 0){
     std::cout<<"Laplacian computation duration: " << time2 - time1 <<std::endl;
   }
+  if(s_p == stopping_point::AFTER_LAPLACIAN){
+    return;
+  }
 
   if(this->verbosity > 0){
     std::cout<<std::endl;
@@ -55,6 +58,9 @@ void Solver::solve(){
     // run all necessary solving steps
     this->predict_velocity();
     this->assemble_poisson_RHS();
+    if(s_p == stopping_point::AFTER_RHS){
+      return;
+    }
     this->poisson_solve_pressure();
     this->correct_velocity();
 
@@ -171,7 +177,7 @@ void Solver::predict_velocity(){
 
 // implementation of the poisson RHS assembly
 void Solver::assemble_poisson_RHS(){
-  this->RHS = Kokkos::View<double*[1]>("RHS", this->mesh.get_n_points_x() * this->mesh.get_n_points_y());
+  this->RHS = Kokkos::View<double*>("RHS", this->mesh.get_n_points_x() * this->mesh.get_n_points_y());
   double factor = this->rho / this->delta_t;
   for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
     for(int i = 1; i < this->mesh.get_n_cells_x(); i++){
@@ -181,7 +187,7 @@ void Solver::assemble_poisson_RHS(){
       double v_b = this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i+1, j);
       double inv_h = 1 / (2 * this->mesh.get_cell_size());
       int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
-      this->RHS(k, 0) = factor * ((u_r - u_l + v_t - v_b) * inv_h);
+      this->RHS(k) = factor * ((u_r - u_l + v_t - v_b) * inv_h);
     }
   }
 }

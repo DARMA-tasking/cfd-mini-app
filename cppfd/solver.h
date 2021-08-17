@@ -31,8 +31,17 @@ class Solver
       this->nu = d_v / r;
     }
 
+    // getter for the laplacian for unit testing
+    Kokkos::View<double**> get_laplacian() {return this->laplacian;}
+
+    enum struct stopping_point: uint8_t{
+      NONE,
+      AFTER_LAPLACIAN,
+      AFTER_RHS
+    };
+
     // main solver routine
-    void solve();
+    void solve(stopping_point s_p = stopping_point::NONE);
 
   private:
     // assemble Laplacian matrix for Poisson solver
@@ -68,7 +77,7 @@ class Solver
     Kokkos::View<double**> laplacian_inv = {};
 
     // poisson equation right hand side vector
-    Kokkos::View<double*[1]> RHS = {};
+    Kokkos::View<double*> RHS = {};
 
     // boundary conditions
     BoundaryConditions boundary_conditions;
