@@ -21,13 +21,14 @@ print("# matrix:")
 for r in A:
     print("   ", r)
 print("  eigenvalues:", ", ".join(["{:.6g}".format(e) for e in np.linalg.eigvals(A)]))
-print("  rank:", np.linalg.matrix_rank(A))
+rankA = np.linalg.matrix_rank(A)
+print("  rank:", rankA)
 
-kerA = sp.linalg.null_space(A)
-print("  nullspace:")
-for r in kerA:
-    print("   ", r)
-
+# Verify that problem is well-posed when nullspace has dimension 1
+if rankA == len(b) - 1:
+    kerA = [a[0] for a in sp.linalg.null_space(A)]
+    print("  nullspace: <", kerA, '>')
+    print("  kerA . b:", kerA @ b)
 
 ##### Actual solver starts here #####
 
@@ -40,8 +41,8 @@ residual = b - A @ x
 rms2 = residual @ residual
 print("  RMS error:", math.sqrt(rms2))
 
-directions = [residual]
-print("  directions", [list(d) for d in directions])
+direction = residual
+print("  new direction:", direction)
 
 # Iterate
 for k in range(min(A.shape)):
@@ -49,11 +50,11 @@ for k in range(min(A.shape)):
     print("# iteration:", kp1)
 
     # Compute step
-    alpha = rms2 / (directions[k] @ A @ directions[k])
+    alpha = rms2 / (direction @ A @ direction)
     print("  alpha[{}]: {}".format(k, alpha))
 
     # Update solution
-    x += alpha * directions[k]
+    x += alpha * direction
     print("  updated solution:", x)
 
     # Update residual
@@ -62,7 +63,7 @@ for k in range(min(A.shape)):
     print("  RMS error:", math.sqrt(new_rms2))
 
     # Terminate early when possible
-    if new_rms2 < 1e-8:
+    if new_rms2 < 1e-6:
         print("# CG converged to solution: {} with residual norm: {}".format(
             x, math.sqrt(new_rms2)))
         sys.exit(0)
@@ -70,8 +71,8 @@ for k in range(min(A.shape)):
     # Compute new direction
     beta = new_rms2 / rms2
     print("  beta[{}]: {}".format(k, beta))
-    directions.append(residual - beta * directions[k])
-    print("  new direction:", directions[-1])
+    direction = residual - beta * direction
+    print("  new direction:", direction)
 
     # Update residual squared L2
     rms2 = new_rms2
