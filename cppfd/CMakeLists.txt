@@ -8,6 +8,12 @@ find_package(Kokkos REQUIRED)
 find_package(KokkosKernels REQUIRED)
 include_directories(/usr/local/include)
 
+# Try to find ccache to speed up compilation
+find_program(ccache_binary ccache)
+if (ccache_binary)
+  set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${ccache_binary}")
+endif()
+
 # Add library targets
 add_library(mesh mesh.cpp)
 add_library(boundaryconditions boundaryconditions.cpp)
