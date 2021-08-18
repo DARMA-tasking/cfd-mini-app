@@ -8,6 +8,11 @@
 
 #include<Kokkos_Core.hpp>
 
+#include<KokkosBlas1_axpby.hpp>
+#include<KokkosBlas1_dot.hpp>
+#include<KokkosBlas2_gemv.hpp>
+#include<KokkosBlas3_gemm.hpp>
+
 #include"mesh.h"
 #include"boundaryconditions.h"
 
@@ -53,6 +58,9 @@ class Solver
     // build poisson equation right hand side vector
     void assemble_poisson_RHS();
 
+    // conjugate gradient based solver
+    Kokkos::View<double*> conjugate_gradient_solve(Kokkos::View<double**> A, Kokkos::View<double*>b);
+
     // solve poisson pressure equation using conjugate gradient method
     void poisson_solve_pressure();
 
@@ -78,6 +86,9 @@ class Solver
 
     // poisson equation right hand side vector
     Kokkos::View<double*> RHS = {};
+
+    // poisson equation left hand side pressure vector
+    Kokkos::View<double*> pressure_vector = {};
 
     // boundary conditions
     BoundaryConditions boundary_conditions;

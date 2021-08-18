@@ -177,24 +177,75 @@ void Solver::predict_velocity(){
 
 // implementation of the poisson RHS assembly
 void Solver::assemble_poisson_RHS(){
-  this->RHS = Kokkos::View<double*>("RHS", this->mesh.get_n_points_x() * this->mesh.get_n_points_y());
+  this->RHS = Kokkos::View<double*>("RHS", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
   double factor = this->rho / this->delta_t;
   for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
-    for(int i = 1; i < this->mesh.get_n_cells_x(); i++){
+    for(int i = 0; i < this->mesh.get_n_cells_x(); i++){
       double u_r = this->mesh.get_velocity_u(i+1, j) + this->mesh.get_velocity_u(i+1, j+1);
       double u_l = this->mesh.get_velocity_u(i, j) + this->mesh.get_velocity_u(i, j+1);
       double v_t = this->mesh.get_velocity_v(i, j+1) + this->mesh.get_velocity_v(i+1, j+1);
       double v_b = this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i+1, j);
       double inv_h = 1 / (2 * this->mesh.get_cell_size());
-      int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
+      int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
       this->RHS(k) = factor * ((u_r - u_l + v_t - v_b) * inv_h);
     }
   }
 }
 
+Kokkos::View<double*> Solver::conjugate_gradient_solve(Kokkos::View<double**> A, Kokkos::View<double*> b){
+  // initialize containers and values
+  Kokkos::View<double*> x("x", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
+  Kokkos::View<double*> residual("residual", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
+
+  KokkosBlas::gemv("N", -1, A, x, 0, residual);
+  KokkosBlas::axpy(1 , b, residual);
+  double rms2 = KokkosBlas::dot(residual, residual);
+
+  Kokkos::View<double*> direction("direction", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
+  direction = residual;
+
+  for(int k = 0; k < A.extent(0); k++){
+    // compute step;
+    //  there probably is a better way to do this (alpha = rms2 / (direction * A * direction)) without declaring this intermediate vector
+    Kokkos::View<double*> intermediate("intermediate", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
+    KokkosBlas::gemv("N", 1, A, direction, 0, intermediate);
+    double denominator = KokkosBlas::dot(direction, intermediate);
+    double alpha = rms2 / denominator;
+
+    // update solution
+    KokkosBlas::axpy(1 , direction, x);
+
+    // update residual
+    KokkosBlas::gemv("N", -1, A, x, 0, residual);
+    KokkosBlas::axpy(1 , b, residual);
+    double new_rms2 = KokkosBlas::dot(residual, residual);
+
+    // terminate early when possible
+    if(new_rms2 < 1e-6){
+      std::cout<<"here"<<std::endl;
+      return x;
+    }
+
+    // compute new direction
+    KokkosBlas::axpby(1, residual, - new_rms2 / rms2, direction);
+
+    // update residual squared L2
+    rms2 = new_rms2;
+  }
+  return x;
+}
+
 //implementation of the poisson equation solver
 void Solver::poisson_solve_pressure(){
-  std::cout<<"*solves poisson pressure equation*"<<std::endl;
+  std::cout<<"*solving poisson pressure equation*"<<std::endl;
+
+  KokkosBlas::gemm("N", "N", 0, this->laplacian, this->laplacian, 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size()), this->laplacian);
+  this->pressure_vector = this->conjugate_gradient_solve(this->laplacian, this->RHS);
+  for(int k=0; k < this->pressure_vector.extent(0); k++){
+    int i = this->mesh.index_to_cartesian(k, this->mesh.get_n_cells_x(), (this->mesh.get_n_cells_x() * this->mesh.get_n_cells_x()) + 1)[0];
+    int j = this->mesh.index_to_cartesian(k, this->mesh.get_n_cells_x(), (this->mesh.get_n_cells_x() * this->mesh.get_n_cells_x()) + 1)[1];
+    this->mesh.set_pressure(i, j, this->pressure_vector(k));
+  }
 }
 
 // implementation of the corrector step

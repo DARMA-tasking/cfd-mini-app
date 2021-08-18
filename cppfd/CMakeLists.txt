@@ -5,6 +5,7 @@ project(main)
 
 # Find required dependencies
 find_package(Kokkos)
+find_package(KokkosKernels REQUIRED)
 include_directories(/usr/local/include)
 
 # Add library targets
@@ -19,4 +20,6 @@ add_executable(test test.cpp)
 target_link_libraries(mesh Kokkos::kokkos)
 target_link_libraries(boundaryconditions Kokkos::kokkos)
 target_link_libraries(solver Kokkos::kokkos)
+target_link_libraries(solver Kokkos::kokkoskernels)
 target_link_libraries(test Kokkos::kokkos)
+target_link_libraries(test Kokkos::kokkoskernels)
