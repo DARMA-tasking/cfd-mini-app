@@ -1,5 +1,13 @@
 name: Docker Build CI
 
+on:
+  push:
+    branches:
+      - develop
+      - master
+      - 1.*
+  pull_request:
+
 jobs:
 
   build:
