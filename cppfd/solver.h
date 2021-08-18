@@ -59,10 +59,10 @@ class Solver
     void assemble_poisson_RHS();
 
     // conjugate gradient based solver
-    Kokkos::View<double*> conjugate_gradient_solve(Kokkos::View<double**> A, Kokkos::View<double*>b);
+    Kokkos::View<double*> conjugate_gradient_solve(double RMS2_error);
 
     // solve poisson pressure equation using conjugate gradient method
-    void poisson_solve_pressure();
+    void poisson_solve_pressure(double RMS2_error);
 
     // apply corrector step
     void correct_velocity();

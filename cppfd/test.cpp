@@ -14,7 +14,7 @@ int main(int argc, char** argv) {
   double delta_t = 0.001;
   double t_final = 0.02;
   double max_C = 0.5;
-  Mesh mesh(10, 10, 0.1);
+  Mesh mesh(3, 3, 0.1);
 
 
   auto o = mesh.get_origin();
@@ -47,7 +47,7 @@ int main(int argc, char** argv) {
 
   BoundaryConditions b_c(mesh, velocity_values);
   Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
-  solver.solve();
+  solver.solve(Solver::stopping_point::AFTER_RHS);
   std::cout<<mesh.get_velocity_u(5, 10)<<std::endl;
 
   return 0;

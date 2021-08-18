@@ -35,6 +35,12 @@ void Solver::solve(stopping_point s_p){
     std::cout<<"Laplacian computation duration: " << time2 - time1 <<std::endl;
   }
   if(s_p == stopping_point::AFTER_LAPLACIAN){
+    for(int j = 0 ; j<this->laplacian.extent(1); j++){
+      for(int i = 0; i < this->laplacian.extent(0); i++){
+        std::cout<<" "<<this->laplacian(i, j);
+      }
+      std::cout<<std::endl;
+    }
     return;
   }
 
@@ -59,9 +65,12 @@ void Solver::solve(stopping_point s_p){
     this->predict_velocity();
     this->assemble_poisson_RHS();
     if(s_p == stopping_point::AFTER_RHS){
+      for(int i = 0; i < this->RHS.extent(0); i++){
+        std::cout<<" "<<this->RHS(i)<<std::endl;
+      }
       return;
     }
-    this->poisson_solve_pressure();
+    this->poisson_solve_pressure(1e-6);
     this->correct_velocity();
 
     // // CFL based adaptative time step
@@ -103,14 +112,18 @@ void Solver::assemble_laplacian(){
   const int mn = m * n;
   this->laplacian = Kokkos::View<double**>("laplacian", mn, mn);
 
-  for(int j = 1; j <= n - 1; j++){
-    for(int i = 1; i <= m - 1; i++){
+  for(int j = 0; j < n; j++){
+    for(int i = 0; i < m; i++){
       int k = this->mesh.cartesian_to_index(i, j, m, n);
       // initialize diagonal value
       int v = -4;
 
-      //detect corners and borders
-      if(i == 0 || i == m - 1 || j == 0 || j == n - 1)
+      // detect corners and borders
+      if(i == 0 || i == m - 1)
+      {
+        ++v;
+      }
+      if(j == 0 || j == n - 1)
       {
         ++v;
       }
@@ -119,7 +132,7 @@ void Solver::assemble_laplacian(){
       this->laplacian(k, k) = v;
 
       // assign unit entries
-      if(i == 1)
+      if(i > 0)
       {
         this->laplacian(k, k-1) = 1;
       }
@@ -127,7 +140,7 @@ void Solver::assemble_laplacian(){
       {
         this->laplacian(k, k + 1) = 1;
       }
-      if(j == 1)
+      if(j > 0)
       {
         this->laplacian(k, k - m) = 1;
       }
@@ -192,37 +205,50 @@ void Solver::assemble_poisson_RHS(){
   }
 }
 
-Kokkos::View<double*> Solver::conjugate_gradient_solve(Kokkos::View<double**> A, Kokkos::View<double*> b){
-  // initialize containers and values
-  Kokkos::View<double*> x("x", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
-  Kokkos::View<double*> residual("residual", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
+Kokkos::View<double*> Solver::conjugate_gradient_solve(double RMS2_error){
+  std::cout<<"************************************************************"<<std::endl;
 
-  KokkosBlas::gemv("N", -1, A, x, 0, residual);
-  KokkosBlas::axpy(1 , b, residual);
+  // initialize approximate solution with null guess
+  uint64_t n_x = this->mesh.get_n_cells_x();
+  uint64_t n_y = this->mesh.get_n_cells_y();
+  Kokkos::View<double*> x("x", n_x * n_y);
+
+  // initialize residual
+  Kokkos::View<double*> residual("residual", n_x * n_y);
+  Kokkos::deep_copy (residual, this->RHS);
+  double factor = 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+  KokkosBlas::gemv("N", - factor, this->laplacian, x, 1, residual);
   double rms2 = KokkosBlas::dot(residual, residual);
+  std::cout<<rms2<<std::endl;
 
-  Kokkos::View<double*> direction("direction", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
-  direction = residual;
+  // terminate early when possible
+  if(rms2 < RMS2_error){
+    return x;
+  }
 
-  for(int k = 0; k < A.extent(0); k++){
-    // compute step;
-    //  there probably is a better way to do this (alpha = rms2 / (direction * A * direction)) without declaring this intermediate vector
-    Kokkos::View<double*> intermediate("intermediate", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
-    KokkosBlas::gemv("N", 1, A, direction, 0, intermediate);
-    double denominator = KokkosBlas::dot(direction, intermediate);
-    double alpha = rms2 / denominator;
+  // initialize first direction of the conjugate basis with residual
+  Kokkos::View<double*> direction("direction", n_x * n_y);
+  Kokkos::deep_copy (direction, residual);
+
+  // storage for laplacian dot direction intermediate vector
+  Kokkos::View<double*> intermediate("intermediate", n_x * n_y);
+
+  // iterate for at most the dimension of the matrix
+  for(int k = 0; k < this->laplacian.extent(0); k++){
+    // compute step length
+    KokkosBlas::gemv("N", factor, this->laplacian, direction, 0, intermediate);
+    double alpha = rms2 / KokkosBlas::dot(direction, intermediate);
 
     // update solution
-    KokkosBlas::axpy(1 , direction, x);
+    KokkosBlas::axpy(alpha, direction, x);
 
     // update residual
-    KokkosBlas::gemv("N", -1, A, x, 0, residual);
-    KokkosBlas::axpy(1 , b, residual);
+    Kokkos::deep_copy (residual, this->RHS);
+    KokkosBlas::gemv("N", - factor, this->laplacian, x, 1, residual);
     double new_rms2 = KokkosBlas::dot(residual, residual);
 
     // terminate early when possible
-    if(new_rms2 < 1e-6){
-      std::cout<<"here"<<std::endl;
+    if(new_rms2 < RMS2_error){
       return x;
     }
 
@@ -231,16 +257,18 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(Kokkos::View<double**> A,
 
     // update residual squared L2
     rms2 = new_rms2;
+    std::cout<<rms2<<std::endl;
   }
+
+  // return approximate solution
   return x;
 }
 
 //implementation of the poisson equation solver
-void Solver::poisson_solve_pressure(){
+void Solver::poisson_solve_pressure(double RMS2_error){
   std::cout<<"*solving poisson pressure equation*"<<std::endl;
 
-  KokkosBlas::gemm("N", "N", 0, this->laplacian, this->laplacian, 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size()), this->laplacian);
-  this->pressure_vector = this->conjugate_gradient_solve(this->laplacian, this->RHS);
+  this->pressure_vector = this->conjugate_gradient_solve(RMS2_error);
   for(int k=0; k < this->pressure_vector.extent(0); k++){
     int i = this->mesh.index_to_cartesian(k, this->mesh.get_n_cells_x(), (this->mesh.get_n_cells_x() * this->mesh.get_n_cells_x()) + 1)[0];
     int j = this->mesh.index_to_cartesian(k, this->mesh.get_n_cells_x(), (this->mesh.get_n_cells_x() * this->mesh.get_n_cells_x()) + 1)[1];
