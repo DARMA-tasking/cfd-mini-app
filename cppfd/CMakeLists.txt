@@ -1,10 +1,10 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.15)
 
 # Set the project name
-project(main)
+project(cfd-mini-app)
 
 # Find required dependencies
-find_package(Kokkos)
+find_package(Kokkos REQUIRED)
 find_package(KokkosKernels REQUIRED)
 include_directories(/usr/local/include)
 
