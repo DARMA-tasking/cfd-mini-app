@@ -55,7 +55,10 @@ class Mesh
     double get_velocity_v(int i, int j);
 
     // setter to assign new mesh point data
-    void set_mesh_velocities(Kokkos::View<double*[2]> new_velocities){this->velocity = new_velocities;};
+    void set_velocity(Kokkos::View<double*[2]> v){this->velocity = v;};
+
+    // setter to assign new mesh cell data
+    void set_pressure(Kokkos::View<double*> p){this->pressure = p;};
 
   private:
     // physical origin f the mesh

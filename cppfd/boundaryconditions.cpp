@@ -9,7 +9,7 @@ void BoundaryConditions::apply_velocity_bc()
     this->mesh.set_velocity_u(i, 0, this->u_bot);
     this->mesh.set_velocity_v(i, 0, this->v_bot);
   }
-  for(int j = 0; j < this->mesh.get_n_points_x(); j++)
+  for(int j = 0; j < this->mesh.get_n_points_y(); j++)
   {
     this->mesh.set_velocity_u(0, j, this->u_left);
     this->mesh.set_velocity_v(0, j, this->v_left);

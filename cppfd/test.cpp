@@ -47,8 +47,8 @@ int main(int argc, char** argv) {
 
   BoundaryConditions b_c(mesh, velocity_values);
   Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
-  solver.solve(Solver::stopping_point::AFTER_RHS);
-  std::cout<<mesh.get_velocity_u(5, 10)<<std::endl;
+  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::CONJUGATE_GRADIENT);
+  std::cout<<mesh.get_velocity_u(1, 1)<<std::endl;
 
   return 0;
 }

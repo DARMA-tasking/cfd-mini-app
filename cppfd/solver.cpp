@@ -3,7 +3,7 @@
 #include"solver.h"
 
 // main function to solve N-S equation on time steps
-void Solver::solve(stopping_point s_p){
+void Solver::solve(stopping_point s_p, linear_solver l_s){
   // begin simulation
   if(this->verbosity >= 1){
     std::cout<<"Initial timestep : " << this->delta_t << ", " << "Time final : " << this->t_final <<std::endl;
@@ -15,6 +15,14 @@ void Solver::solve(stopping_point s_p){
     std::cout<<"Applying velocity boundary conditions..."<<std::endl;
   }
   this->boundary_conditions.apply_velocity_bc();
+  if(s_p == stopping_point::AFTER_BOUNDARY_CONDITION){
+    for(int j = 0; j < this->mesh.get_n_points_y(); j++){
+      for(int i = 0; i < this->mesh.get_n_points_x(); i++){
+        std::cout<<i<<" "<<j<<" : "<<this->mesh.get_velocity_u(i, j)<<" , "<<this->mesh.get_velocity_v(i, j)<<std::endl;
+      }
+    }
+    return;
+  }
 
   double velocity_bc_max = this->boundary_conditions.get_velocity_bc_max_norm();
   double l = this->mesh.get_cell_size() * std::max(this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
@@ -63,15 +71,33 @@ void Solver::solve(stopping_point s_p){
 
     // run all necessary solving steps
     this->predict_velocity();
+    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+      std::cout<<" predicted velocity:\n";
+      for(int j = 0; j < this->mesh.get_n_points_y(); j++){
+        for(int i = 0; i < this->mesh.get_n_points_x(); i++){
+          std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_velocity_u(i, j)<<" , "<<this->mesh.get_velocity_v(i, j)<<std::endl;
+        }
+      }
+    }
+
     this->assemble_poisson_RHS();
-    if(s_p == stopping_point::AFTER_RHS){
-      for(int i = 0; i < this->RHS.extent(0); i++){
-        std::cout<<" "<<this->RHS(i)<<std::endl;
+    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+      std::cout<<" RHS:\n";
+      for(int k = 0; k < this->RHS.extent(0); k++){
+        std::cout<<" "<<k<<" : "<<this->RHS(k)<<std::endl;
+      }
+    }
+    this->poisson_solve_pressure(1e-6, l_s);
+    this->correct_velocity();
+    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+      std::cout<<" corrected velocity:\n";
+      for(int j = 0; j < this->mesh.get_n_points_y(); j++){
+        for(int i = 0; i < this->mesh.get_n_points_x(); i++){
+          std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_velocity_u(i, j)<<" , "<<this->mesh.get_velocity_v(i, j)<<std::endl;
+        }
       }
       return;
     }
-    this->poisson_solve_pressure(1e-6);
-    this->correct_velocity();
 
     // // CFL based adaptative time step
     // double max_m_C = this->compute_global_courant_number();
@@ -161,8 +187,8 @@ void Solver::predict_velocity(){
   const double inv_size_db = 1 / (2 * this->mesh.get_cell_size());
 
   // predict velocity components using finite difference discretization
-  for(int j = 1; j < this->mesh.get_n_cells_y(); j++){
-    for(int i = 1; i < this->mesh.get_n_cells_x(); i++){
+  for(uint64_t j = 1; j < this->mesh.get_n_points_y() - 1; j++){
+    for(uint64_t i = 1; i < this->mesh.get_n_points_x() - 1; i++){
       // factors needed to predict new u component
       double v = 0.25 * (this->mesh.get_velocity_v(i-1, j) + this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i, j+1));
       double dudx2 = (this->mesh.get_velocity_u(i-1, j) - 2 * this->mesh.get_velocity_u(i, j) + this->mesh.get_velocity_u(i+1, j)) * inv_size_sq;
@@ -178,14 +204,20 @@ void Solver::predict_velocity(){
       double dvdx = u * (this->mesh.get_velocity_v(i, j+1) - this->mesh.get_velocity_v(i, j-1)) * inv_size_db;
 
       // assign predicted u and v components to predicted_velocity storage
-      int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
+      uint64_t k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
       predicted_velocity(k, 0) = this->mesh.get_velocity_u(i, j) + this->delta_t * (this->nu * (dudx2 + dudy2) - (this->mesh.get_velocity_u(i, j) * dudx + v * dudy));
       predicted_velocity(k, 1) = this->mesh.get_velocity_v(i, j) + this->delta_t * (this->nu * (dvdx2 + dvdy2) - (this->mesh.get_velocity_v(i, j) * dvdx + u * dvdy));
     }
   }
 
-  // assign predicted velocity vectors to mesh
-  this->mesh.set_mesh_velocities(predicted_velocity);
+  // assign interior predicted velocity vectors to mesh
+  for(int j = 1; j < this->mesh.get_n_points_y() - 1; j++){
+    for(int i = 1; i < this->mesh.get_n_points_x() - 1; i++){
+      int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
+      this->mesh.set_velocity_u(i, j, predicted_velocity(k, 0));
+      this->mesh.set_velocity_v(i, j, predicted_velocity(k, 1));
+    }
+  }
 }
 
 // implementation of the poisson RHS assembly
@@ -199,15 +231,13 @@ void Solver::assemble_poisson_RHS(){
       double v_t = this->mesh.get_velocity_v(i, j+1) + this->mesh.get_velocity_v(i+1, j+1);
       double v_b = this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i+1, j);
       double inv_h = 1 / (2 * this->mesh.get_cell_size());
-      int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
+      uint64_t k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
       this->RHS(k) = factor * ((u_r - u_l + v_t - v_b) * inv_h);
     }
   }
 }
 
-Kokkos::View<double*> Solver::conjugate_gradient_solve(double RMS2_error){
-  std::cout<<"************************************************************"<<std::endl;
-
+Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   // initialize approximate solution with null guess
   uint64_t n_x = this->mesh.get_n_cells_x();
   uint64_t n_y = this->mesh.get_n_cells_y();
@@ -219,10 +249,12 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double RMS2_error){
   double factor = 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
   KokkosBlas::gemv("N", - factor, this->laplacian, x, 1, residual);
   double rms2 = KokkosBlas::dot(residual, residual);
-  std::cout<<rms2<<std::endl;
+
+  // compute square norm of RHS for relative error
+  double RHS2 = KokkosBlas::dot(this->RHS, this->RHS);
 
   // terminate early when possible
-  if(rms2 < RMS2_error){
+  if(rms2 / RHS2 < r_tol){
     return x;
   }
 
@@ -232,6 +264,8 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double RMS2_error){
 
   // storage for laplacian dot direction intermediate vector
   Kokkos::View<double*> intermediate("intermediate", n_x * n_y);
+
+
 
   // iterate for at most the dimension of the matrix
   for(int k = 0; k < this->laplacian.extent(0); k++){
@@ -248,7 +282,7 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double RMS2_error){
     double new_rms2 = KokkosBlas::dot(residual, residual);
 
     // terminate early when possible
-    if(new_rms2 < RMS2_error){
+    if(new_rms2 / RHS2 < r_tol){
       return x;
     }
 
@@ -257,7 +291,7 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double RMS2_error){
 
     // update residual squared L2
     rms2 = new_rms2;
-    std::cout<<rms2<<std::endl;
+    std::cout<<"  relative error squared: "<<rms2 / RHS2<<std::endl;
   }
 
   // return approximate solution
@@ -265,27 +299,22 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double RMS2_error){
 }
 
 //implementation of the poisson equation solver
-void Solver::poisson_solve_pressure(double RMS2_error){
-  std::cout<<"*solving poisson pressure equation*"<<std::endl;
-
-  this->pressure_vector = this->conjugate_gradient_solve(RMS2_error);
-  for(int k=0; k < this->pressure_vector.extent(0); k++){
-    int i = this->mesh.index_to_cartesian(k, this->mesh.get_n_cells_x(), (this->mesh.get_n_cells_x() * this->mesh.get_n_cells_x()) + 1)[0];
-    int j = this->mesh.index_to_cartesian(k, this->mesh.get_n_cells_x(), (this->mesh.get_n_cells_x() * this->mesh.get_n_cells_x()) + 1)[1];
-    this->mesh.set_pressure(i, j, this->pressure_vector(k));
+void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
+  std::cout<<"solving poisson pressure equation"<<std::endl;
+  if(l_s == linear_solver::CONJUGATE_GRADIENT){
+    this->mesh.set_pressure(this->conjugate_gradient_solve(r_tol));
+  }
+  else{
+    std::cout<<"  pressure Poisson equation ignored"<<std::endl;
   }
 }
 
 // implementation of the corrector step
 void Solver::correct_velocity(){
-  for(int j = 1; j <= this->mesh.get_n_cells_y(); j++){
-    for(int i = 1; i <= this->mesh.get_n_cells_x(); i++){
+  for(uint64_t j = 1; j < this->mesh.get_n_points_y() - 1; j++){
+    for(uint64_t i = 1; i < this->mesh.get_n_points_x() - 1; i++){
       this->mesh.set_velocity_u(i, j, (this->mesh.get_velocity_u(i, j) - (this->delta_t/this->rho) * (this->mesh.get_pressure(i, j) - this->mesh.get_pressure(i-1, j)) * 1/this->mesh.get_cell_size()));
-    }
-  }
-  for(int j = 1; j <= this->mesh.get_n_cells_y(); j++){
-    for(int i = 1; i <= this->mesh.get_n_cells_x(); i++){
-      this->mesh.set_velocity_v(i, j, (this->mesh.get_velocity_u(i, j) - (this->delta_t/this->rho) * (this->mesh.get_pressure(i, j) - this->mesh.get_pressure(i, j-1)) * 1/this->mesh.get_cell_size()));
+      this->mesh.set_velocity_v(i, j, (this->mesh.get_velocity_v(i, j) - (this->delta_t/this->rho) * (this->mesh.get_pressure(i, j) - this->mesh.get_pressure(i, j-1)) * 1/this->mesh.get_cell_size()));
     }
   }
 }

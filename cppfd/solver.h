@@ -39,14 +39,22 @@ class Solver
     // getter for the laplacian for unit testing
     Kokkos::View<double**> get_laplacian() {return this->laplacian;}
 
+    // provide stopping points for debugging purposes
     enum struct stopping_point: uint8_t{
       NONE,
+      AFTER_BOUNDARY_CONDITION,
       AFTER_LAPLACIAN,
-      AFTER_RHS
+      AFTER_FIRST_ITERATION
+    };
+
+    // allow for different linear solvers for the pressure
+    enum struct linear_solver: uint8_t{
+      NONE,
+      CONJUGATE_GRADIENT
     };
 
     // main solver routine
-    void solve(stopping_point s_p = stopping_point::NONE);
+    void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::CONJUGATE_GRADIENT);
 
   private:
     // assemble Laplacian matrix for Poisson solver
@@ -59,10 +67,10 @@ class Solver
     void assemble_poisson_RHS();
 
     // conjugate gradient based solver
-    Kokkos::View<double*> conjugate_gradient_solve(double RMS2_error);
+    Kokkos::View<double*> conjugate_gradient_solve(double r_tol);
 
     // solve poisson pressure equation using conjugate gradient method
-    void poisson_solve_pressure(double RMS2_error);
+    void poisson_solve_pressure(double r_tol, linear_solver l_s);
 
     // apply corrector step
     void correct_velocity();
@@ -86,9 +94,6 @@ class Solver
 
     // poisson equation right hand side vector
     Kokkos::View<double*> RHS = {};
-
-    // poisson equation left hand side pressure vector
-    Kokkos::View<double*> pressure_vector = {};
 
     // boundary conditions
     BoundaryConditions boundary_conditions;
