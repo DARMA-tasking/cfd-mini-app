@@ -6,7 +6,6 @@ project(cfd-mini-app)
 # Find required dependencies
 find_package(Kokkos REQUIRED)
 find_package(KokkosKernels REQUIRED)
-include_directories(/usr/local/include)
 
 # Try to find ccache to speed up compilation
 find_program(ccache_binary ccache)
