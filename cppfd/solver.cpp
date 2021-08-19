@@ -1,6 +1,6 @@
-#include<Kokkos_Core.hpp>
+#include <Kokkos_Core.hpp>
 
-#include"solver.h"
+#include "solver.h"
 
 // main function to solve N-S equation on time steps
 void Solver::solve(stopping_point s_p, linear_solver l_s){
@@ -24,6 +24,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     return;
   }
 
+  // compute Reynolds number from input parameters
   double velocity_bc_max = this->boundary_conditions.get_velocity_bc_max_norm();
   double l = this->mesh.get_cell_size() * std::max(this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
   this->Re = velocity_bc_max * l / this->nu;
@@ -264,8 +265,6 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
 
   // storage for laplacian dot direction intermediate vector
   Kokkos::View<double*> intermediate("intermediate", n_x * n_y);
-
-
 
   // iterate for at most the dimension of the matrix
   for(int k = 0; k < this->laplacian.extent(0); k++){

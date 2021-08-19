@@ -1,20 +1,16 @@
 #pragma once
-#include<array>
-#include<string>
-#include<cmath>
-#include<map>
+#include <array>
+#include <string>
+#include <cmath>
+#include <map>
 
-#include<Kokkos_Core.hpp>
+#include <Kokkos_Core.hpp>
 
 #include"mesh.h"
 
 class BoundaryConditions
 {
   public:
-    // delete default constructor
-    BoundaryConditions() = delete;
-
-    // constructor
     BoundaryConditions(Mesh& m, std::map<std::string, double> velocity_values)
       : mesh(m)
       , u_top(velocity_values["u_top"])
@@ -38,5 +34,12 @@ class BoundaryConditions
     Mesh mesh;
 
     // boundary condition velocity values
-    double u_top, v_top, u_bot, v_bot, u_left, v_left, u_right, v_right;
+    double u_top = 0;
+    double v_top = 0;
+    double u_bot = 0;
+    double v_bot = 0;
+    double u_left = 0;
+    double v_left = 0;
+    double u_right = 0;
+    double v_right = 0;
 };

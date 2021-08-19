@@ -1,11 +1,11 @@
-#include<iostream>
-#include<array>
-#include<map>
-#include<Kokkos_Core.hpp>
+#include <iostream>
+#include <array>
+#include <map>
+#include <Kokkos_Core.hpp>
 
-#include"mesh.cpp"
-#include"boundaryconditions.cpp"
-#include"solver.cpp"
+#include "mesh.cpp"
+#include "boundaryconditions.cpp"
+#include "solver.cpp"
 
 int main(int argc, char** argv) {
   Kokkos::ScopeGuard kokkos(argc, argv);

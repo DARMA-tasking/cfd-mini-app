@@ -1,28 +1,24 @@
 #pragma once
-#include<array>
-#include<string>
-#include<cstdio>
-#include<limits>
-#include<cmath>
-#include<map>
+#include <array>
+#include <string>
+#include <cstdio>
+#include <limits>
+#include <cmath>
+#include <map>
 
-#include<Kokkos_Core.hpp>
+#include <Kokkos_Core.hpp>
 
-#include<KokkosBlas1_axpby.hpp>
-#include<KokkosBlas1_dot.hpp>
-#include<KokkosBlas2_gemv.hpp>
-#include<KokkosBlas3_gemm.hpp>
+#include <KokkosBlas1_axpby.hpp>
+#include <KokkosBlas1_dot.hpp>
+#include <KokkosBlas2_gemv.hpp>
+#include <KokkosBlas3_gemm.hpp>
 
-#include"mesh.h"
-#include"boundaryconditions.h"
+#include "mesh.h"
+#include "boundaryconditions.h"
 
 class Solver
 {
   public:
-    // delete default constructor
-    Solver() = delete;
-
-    // initialization constructor
     Solver(Mesh& m, BoundaryConditions& b_c, double d_t, double t_f, double r, double d_v, double m_C, int v)
       : mesh(m)
       , boundary_conditions(b_c)
@@ -85,8 +81,13 @@ class Solver
     Mesh mesh;
 
     // physics and simulation control related variables
-    double nu, rho, delta_t, t_final, max_C, Re;
-    int verbosity;
+    double nu = 0.0008;
+    double rho = 1.225;
+    double delta_t = 0.001;
+    double t_final = 0.001;
+    double max_C = 0.5;
+    double Re = 100;
+    int verbosity = 1;
 
     // laplacian matrix and its inverse
     Kokkos::View<double**> laplacian = {};
