@@ -5,6 +5,13 @@
 
 #include <Kokkos_Core.hpp>
 
+#include <vtkDoubleArray.h>
+#include <vtkCellData.h>
+#include <vtkPointData.h>
+#include <vtkUniformGrid.h>
+#include <vtkXMLImageDataWriter.h>
+#include <vtkXMLImageDataReader.h>
+
 class Mesh
 {
   public:
@@ -55,6 +62,9 @@ class Mesh
 
     // setter to assign new mesh cell data
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
+
+    // VTK visualization file writer
+    void write_vtk(std::string file_name);
 
   private:
     // physical origin f the mesh

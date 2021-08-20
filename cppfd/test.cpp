@@ -10,29 +10,11 @@
 int main(int argc, char** argv) {
   Kokkos::ScopeGuard kokkos(argc, argv);
   double density = 1.225;
-  double dynamic_viscosity = 0.001;
+  double dynamic_viscosity = 0.3;
   double delta_t = 0.001;
-  double t_final = 0.02;
+  double t_final = 0.1;
   double max_C = 0.5;
-  Mesh mesh(3, 3, 0.1);
-
-
-  auto o = mesh.get_origin();
-  std::cout<<o[0]<<" "<<o[1]<<std::endl;
-  auto c = mesh.index_to_cartesian(6, 5, 25);
-  std::cout<<c[0]<<" "<<c[1]<<std::endl;
-  auto i = mesh.cartesian_to_index(c[0], c[1], 5, 5);
-  std::cout<<i<<std::endl;
-
-  mesh.set_pressure(0, 0, 5);
-  double p = mesh.get_pressure(0, 0);
-  std::cout<<p<<std::endl;
-
-  mesh.set_velocity_u(0, 0, 3.2);
-  mesh.set_velocity_v(0, 0, 7.5);
-  double u = mesh.get_velocity_u(0, 0);
-  double v = mesh.get_velocity_v(0, 0);
-  std::cout<<u<<", "<<v<<std::endl;
+  Mesh mesh(10, 10, 0.1);
 
   std::map<std::string, double> velocity_values = {
                                                   {"u_top", 1.0},
@@ -48,7 +30,8 @@ int main(int argc, char** argv) {
   BoundaryConditions b_c(mesh, velocity_values);
   Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
   solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::CONJUGATE_GRADIENT);
-  std::cout<<mesh.get_velocity_u(1, 1)<<std::endl;
+
+  mesh.write_vtk("test.vti");
 
   return 0;
 }

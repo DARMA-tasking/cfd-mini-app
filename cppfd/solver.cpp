@@ -290,7 +290,9 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
 
     // update residual squared L2
     rms2 = new_rms2;
-    std::cout<<"  relative error squared: "<<rms2 / RHS2<<std::endl;
+    if(this->verbosity > 1){
+      std::cout<<"  relative error squared: "<<rms2 / RHS2<<std::endl;
+    }
   }
 
   // return approximate solution
@@ -299,7 +301,6 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
 
 //implementation of the poisson equation solver
 void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
-  std::cout<<"solving poisson pressure equation"<<std::endl;
   if(l_s == linear_solver::CONJUGATE_GRADIENT){
     this->mesh.set_pressure(this->conjugate_gradient_solve(r_tol));
   }
