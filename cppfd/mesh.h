@@ -5,6 +5,8 @@
 
 #include <Kokkos_Core.hpp>
 
+#include <vtkDoubleArray.h>
+
 class Mesh
 {
   public:

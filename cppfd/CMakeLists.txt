@@ -7,6 +7,9 @@ project(cfd-mini-app)
 find_package(Kokkos REQUIRED)
 find_package(KokkosKernels REQUIRED)
 
+find_package(VTK REQUIRED)
+include(${VTK_USE_FILE})
+
 # Try to find ccache to speed up compilation
 find_program(ccache_binary ccache)
 if (ccache_binary)
@@ -22,9 +25,7 @@ add_library(solver solver.cpp)
 add_executable(test test.cpp)
 
 # Link targets to libraries
-target_link_libraries(mesh Kokkos::kokkos)
+target_link_libraries(mesh Kokkos::kokkos ${VTK_LIBRARIES})
 target_link_libraries(boundaryconditions Kokkos::kokkos)
-target_link_libraries(solver Kokkos::kokkos)
-target_link_libraries(solver Kokkos::kokkoskernels)
-target_link_libraries(test Kokkos::kokkos)
-target_link_libraries(test Kokkos::kokkoskernels)
+target_link_libraries(solver Kokkos::kokkos Kokkos::kokkoskernels)
+target_link_libraries(test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
