@@ -88,3 +88,45 @@ double Mesh::get_velocity_v(int i, int j){
     return std::nan("");
   }
 }
+
+void Mesh::write_vtk(std::string file_name){
+  vtkNew<vtkUniformGrid> ug;
+  uint64_t nx = this->n_cells_x;
+  uint64_t ny = this->n_cells_y;
+  ug->SetDimensions(nx+1, ny+1, 1);
+  ug->SetOrigin(this->O[0], this->O[0], 0);
+  ug->SetSpacing(this->h, this->h, 0);
+
+  // create cell centered scalar field
+  vtkNew<vtkDoubleArray> cell_data;
+  cell_data->SetNumberOfComponents(1);
+  cell_data->SetName("Pressure");
+  cell_data->SetNumberOfValues(nx * ny);
+  for(int j = 0; j < ny; j++){
+    for(int i = 0; i < nx; i++){
+      cell_data->SetValue(j*nx + i, this->get_pressure(i,j));
+    }
+  }
+  ug->GetCellData()->SetScalars(cell_data);
+
+  // create point centered vector field
+  vtkNew<vtkDoubleArray> point_data;
+  point_data->SetNumberOfComponents(3);
+  point_data->SetName("Velocity");
+  point_data->SetNumberOfTuples((nx + 1) * (ny + 1));
+  for(int j = 0; j < ny +1; j++){
+    for(int i = 0; i < nx + 1; i++){
+      point_data->SetTuple3(j * (nx + 1) + i, this->get_velocity_u(i, j), this->get_velocity_v(i, j), 0);
+    }
+  }
+  ug->GetPointData()->SetVectors(point_data);
+
+  // write vti visualization file
+  vtkNew<vtkXMLImageDataWriter> output_file;
+  output_file->SetFileName(file_name.c_str());
+  output_file->SetInputData(ug);
+  output_file->Write();
+
+  std::cout<<std::endl;
+  std::cout<<"Visualization file created: \""<<file_name<<"\""<<std::endl;
+}
