@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 
   // run numerical scheme
   Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
-  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::CONJUGATE_GRADIENT);
+  solver.solve(Solver::stopping_point::AFTER_FIRST_ITERATION, Solver::linear_solver::CONJUGATE_GRADIENT);
 
   // save results
   mesh.write_vtk("test.vti");
