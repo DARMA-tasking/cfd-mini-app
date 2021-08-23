@@ -1,9 +1,9 @@
 
 ARG arch=amd64
-FROM ${arch}/ubuntu:18.04 as base
+FROM ${arch}/ubuntu:21.04 as base
 
 ARG proxy=""
-ARG compiler=clang-7
+ARG compiler=clang-9
 
 ENV https_proxy=${proxy} \
     http_proxy=${proxy}
@@ -26,6 +26,11 @@ RUN apt-get update -y -q && \
     make-guile \
     libomp5 \
     libomp-dev \
+    libvtk9-dev \
+    qtbase5-dev \
+    qtchooser \
+    qt5-qmake \
+    qtbase5-dev-tools \
     ccache && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
