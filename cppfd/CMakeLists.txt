@@ -7,7 +7,7 @@ project(cfd-mini-app)
 find_package(Kokkos REQUIRED)
 find_package(KokkosKernels REQUIRED)
 
-find_package(VTK REQUIRED)
+find_package(VTK REQUIRED COMPONENTS CommonCore IOXML)
 
 # Try to find ccache to speed up compilation
 find_program(ccache_binary ccache)
