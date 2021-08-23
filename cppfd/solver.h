@@ -49,8 +49,14 @@ class Solver
       CONJUGATE_GRADIENT
     };
 
+    // allow for adaptative time stepping to be enabled/disabled
+    enum struct adaptative_time_step: uint8_t{
+      ON,
+      OFF
+    };
+
     // main solver routine
-    void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::CONJUGATE_GRADIENT);
+    void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::CONJUGATE_GRADIENT, adaptative_time_step ats = adaptative_time_step::OFF);
 
   private:
     // assemble Laplacian matrix for Poisson solver
@@ -88,6 +94,10 @@ class Solver
     double max_C = 0.5;
     double Re = 100;
     int verbosity = 1;
+    double time_predictor_step = 0;
+    double time_assemble_RHS = 0;
+    double time_poisson_solve = 0;
+    double time_corrector_step = 0;
 
     // laplacian matrix and its inverse
     Kokkos::View<double**> laplacian = {};
