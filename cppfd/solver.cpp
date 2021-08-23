@@ -2,6 +2,11 @@
 
 #include "solver.h"
 
+#include <KokkosBlas1_axpby.hpp>
+#include <KokkosBlas1_dot.hpp>
+#include <KokkosBlas2_gemv.hpp>
+#include <KokkosBlas3_gemm.hpp>
+
 // main function to solve N-S equation on time steps
 void Solver::solve(stopping_point s_p, linear_solver l_s){
   // begin simulation

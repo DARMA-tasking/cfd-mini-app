@@ -4,8 +4,6 @@
 #include <cmath>
 #include <map>
 
-#include <Kokkos_Core.hpp>
-
 #include"mesh.h"
 
 class BoundaryConditions

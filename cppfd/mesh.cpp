@@ -5,6 +5,13 @@
 
 #include "mesh.h"
 
+#include <vtkDoubleArray.h>
+#include <vtkCellData.h>
+#include <vtkPointData.h>
+#include <vtkUniformGrid.h>
+#include <vtkXMLImageDataWriter.h>
+#include <vtkXMLImageDataReader.h>
+
 ////////////////////////////////////////////////////////////////
 // BASIC
 ////////////////////////////////////////////////////////////////

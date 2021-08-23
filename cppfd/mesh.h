@@ -5,13 +5,6 @@
 
 #include <Kokkos_Core.hpp>
 
-#include <vtkDoubleArray.h>
-#include <vtkCellData.h>
-#include <vtkPointData.h>
-#include <vtkUniformGrid.h>
-#include <vtkXMLImageDataWriter.h>
-#include <vtkXMLImageDataReader.h>
-
 class Mesh
 {
   public:

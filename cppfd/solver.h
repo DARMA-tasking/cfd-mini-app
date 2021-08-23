@@ -8,11 +8,6 @@
 
 #include <Kokkos_Core.hpp>
 
-#include <KokkosBlas1_axpby.hpp>
-#include <KokkosBlas1_dot.hpp>
-#include <KokkosBlas2_gemv.hpp>
-#include <KokkosBlas3_gemm.hpp>
-
 #include "mesh.h"
 #include "boundaryconditions.h"
 
