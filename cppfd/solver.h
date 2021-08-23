@@ -77,8 +77,8 @@ class Solver
     // compute maximum courant number over all mesh cells
     double compute_global_courant_number();
 
-    // mesh object to be worked on
-    Mesh mesh;
+    // reference to mesh onto which solve is performed
+    Mesh& mesh;
 
     // physics and simulation control related variables
     double nu = 0.0008;
@@ -91,7 +91,6 @@ class Solver
 
     // laplacian matrix and its inverse
     Kokkos::View<double**> laplacian = {};
-    Kokkos::View<double**> laplacian_inv = {};
 
     // poisson equation right hand side vector
     Kokkos::View<double*> RHS = {};

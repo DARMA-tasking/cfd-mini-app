@@ -30,8 +30,8 @@ class BoundaryConditions
     double get_velocity_bc_max_norm();
 
   private:
-    // mesh object to be worked on
-    Mesh mesh;
+    // reference to mesh onto which boundary conditions apply
+    Mesh& mesh;
 
     // boundary condition velocity values
     double u_top = 0;

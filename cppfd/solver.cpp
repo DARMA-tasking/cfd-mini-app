@@ -85,10 +85,20 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" RHS:\n";
       for(int k = 0; k < this->RHS.extent(0); k++){
-        std::cout<<" "<<k<<" : "<<this->RHS(k)<<std::endl;
+        std::cout<<"  "<<k<<" : "<<this->RHS(k)<<std::endl;
       }
     }
+
     this->poisson_solve_pressure(1e-6, l_s);
+    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+      std::cout<<" pressure:\n";
+      for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
+        for(int i = 0; i < this->mesh.get_n_cells_x(); i++){
+          std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_pressure(i, j)<<std::endl;
+        }
+      }
+    }
+
     this->correct_velocity();
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" corrected velocity:\n";
@@ -97,7 +107,6 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
           std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_velocity_u(i, j)<<" , "<<this->mesh.get_velocity_v(i, j)<<std::endl;
         }
       }
-      return;
     }
 
     // // CFL based adaptative time step
@@ -121,6 +130,11 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     //   }
     //   this->delta_t = adjusted_delta_t;
     // }
+
+    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+      std::cout<<"Stopping after first iteration.\n";
+      return;
+    }
   }
 
   double time3 = timer.seconds();
