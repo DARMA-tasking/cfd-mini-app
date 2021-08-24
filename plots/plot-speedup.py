@@ -7,7 +7,7 @@ import numpy as np
 
 d = dict()
 
-cells = ["10", "15", "20", "fast15"]
+cells = ["10", "15", "20", "fast10", "fast15", "fast20"]
 
 for i in cells:
     d[i] = readTranspose(
@@ -29,7 +29,7 @@ for i in cells:
     ax.errorbar(d[i]["threads"], d[i]["avg"], d[i]["std"], label=i + " cells", linewidth=1.6, color=c(0.1+x), marker='^')
     x = 0.1 + x
 
-ax.legend(loc='upper left', ncol=2, fontsize=14)
+ax.legend(loc='upper right', ncol=2, fontsize=14)
 ax.yaxis.labelpad=16
 ax.set_xlabel('OpenMP Threads')
 ax.set_ylabel('CG Time (s)')
@@ -38,7 +38,7 @@ ax.set_ylabel('CG Time (s)')
 
 # ax.set_yscale('log')
 # plt.ylim([10, 1000])
-plt.ylim([0, 10])
+plt.ylim([0, 60])
 
 # plt.ylim([0, 420])
 # plt.ylim([0, 170])
