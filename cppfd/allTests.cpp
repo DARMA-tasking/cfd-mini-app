@@ -49,12 +49,19 @@ TEST_F(solver_test, laplacian_values_test){
   for(int j = 0; j < 9; j++){
     for(int i = 0; i < 9; i++){
       if(j == i){
-        EXPECT_EQ(solver->get_laplacian()(2 * i, 2 * i), -2);
-        EXPECT_EQ(solver->get_laplacian()(8 - 2 * i, 8 - 2 * i), -2);
-        EXPECT_EQ(solver->get_laplacian()(2 * i + 1, 2 * i + 1), -3);
-      } else if(j == i + 3 || j == i - 3 || j == i - 1 || j == i + 1){
+        // check diagonal coefficient
+        if(i == 0 || i == 1){
+          EXPECT_EQ(solver->get_laplacian()(2 * i, 2 * i), -2);
+          EXPECT_EQ(solver->get_laplacian()(8 - 2 * i, 8 - 2 * i), -2);
+        }
+        if(i < 4){
+          EXPECT_EQ(solver->get_laplacian()(2 * i + 1, 2 * i + 1), -3);
+        }
+      } else if((j == i + 3 && i < 6) || (j == i - 3 && i > 2) || (j == i - 1 && i > 0 && i != 3 && i != 6) || (j == i + 1 && i < 8 && i !=2 && i !=5)){
+        // check non zero off-diagonal coefficients
         EXPECT_EQ(solver->get_laplacian()(i, j), 1);
       } else {
+        // check zero off-diagonal coefficients
         EXPECT_EQ(solver->get_laplacian()(i, j), 0);
       }
     }
