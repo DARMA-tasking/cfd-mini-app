@@ -13,5 +13,6 @@ pushd "$CFD_BUILD"
 # ctest --output-on-failure | tee cmake-output.log
 
 ./test
+./allTests
 
 popd
