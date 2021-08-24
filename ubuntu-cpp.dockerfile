@@ -33,6 +33,7 @@ RUN apt-get update -y -q && \
     qtbase5-dev-tools \
     googletest \
     libgtest-dev \
+    libgmock-dev \
     ccache && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
