@@ -31,6 +31,9 @@ RUN apt-get update -y -q && \
     qtchooser \
     qt5-qmake \
     qtbase5-dev-tools \
+    googletest \
+    libgtest-dev \
+    libgmock-dev \
     ccache && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*

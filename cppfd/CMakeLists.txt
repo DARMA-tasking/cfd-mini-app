@@ -7,7 +7,9 @@ project(cfd-mini-app)
 find_package(Kokkos REQUIRED)
 find_package(KokkosKernels REQUIRED)
 
-find_package(VTK REQUIRED COMPONENTS CommonCore IOXML)
+find_package(VTK REQUIRED COMPONENTS vtkCommonCore vtkIOXML)
+
+find_package(GTest CONFIG REQUIRED)
 
 # Try to find ccache to speed up compilation
 find_program(ccache_binary ccache)
@@ -22,11 +24,13 @@ add_library(solver solver.cpp)
 
 # Add executable target
 add_executable(test test.cpp)
+add_executable(allTests allTests.cpp)
 
 # message(STATUS "libs: ${VTK_LIBRARIES}")
 
 # Link targets to libraries
-target_link_libraries(mesh Kokkos::kokkos VTK::CommonCore VTK::IOXML)
+target_link_libraries(mesh Kokkos::kokkos ${VTK_LIBRARIES})
 target_link_libraries(boundaryconditions Kokkos::kokkos)
 target_link_libraries(solver Kokkos::kokkos Kokkos::kokkoskernels)
-target_link_libraries(test Kokkos::kokkos Kokkos::kokkoskernels VTK::CommonCore VTK::IOXML)
+target_link_libraries(test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
+target_link_libraries(allTests Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES} GTest::gtest)
