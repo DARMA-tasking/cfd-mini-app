@@ -8,7 +8,7 @@
 #include <KokkosBlas3_gemm.hpp>
 
 // main function to solve N-S equation on time steps
-void Solver::solve(stopping_point s_p, linear_solver l_s){
+void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step ats){
   // begin simulation
   if(this->verbosity >= 1){
     std::cout<<"Initial timestep : " << this->delta_t << ", " << "Time final : " << this->t_final <<std::endl;
@@ -76,7 +76,11 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     }
 
     // run all necessary solving steps
+    Kokkos::Timer timer2;
+
     this->predict_velocity();
+    double time_post_predict = timer2.seconds();
+    this->time_predictor_step += time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" predicted velocity:\n";
       for(int j = 0; j < this->mesh.get_n_points_y(); j++){
@@ -87,6 +91,8 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     }
 
     this->assemble_poisson_RHS();
+    double time_post_RHS = timer2.seconds();
+    this->time_assemble_RHS += time_post_RHS - time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" RHS:\n";
       for(int k = 0; k < this->RHS.extent(0); k++){
@@ -95,6 +101,8 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     }
 
     this->poisson_solve_pressure(1e-6, l_s);
+    double time_post_poisson_solve = timer2.seconds();
+    this->time_poisson_solve += time_post_poisson_solve - time_post_RHS;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" pressure:\n";
       for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
@@ -105,6 +113,8 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     }
 
     this->correct_velocity();
+    double time_post_correct = timer2.seconds();
+    this->time_corrector_step += time_post_correct - time_post_poisson_solve;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" corrected velocity:\n";
       for(int j = 0; j < this->mesh.get_n_points_y(); j++){
@@ -114,27 +124,29 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
       }
     }
 
-    // // CFL based adaptative time step
-    // double max_m_C = this->compute_global_courant_number();
-    // double adjusted_delta_t = this->delta_t;
-    // if(this->verbosity > 1){
-    //   std::cout<<"    Computed global CFL = " << max_m_C << "; target max = " << this->max_C <<std::endl;
-    // }
-    // if(max_m_C > this->max_C){
-    //   // decrease time step due to excessive CFL
-    //   adjusted_delta_t = this->delta_t / (max_m_C * 100);
-    //   if(this->verbosity > 1){
-    //     std::cout<<"  - Decreased time step from " << this->delta_t << " to " << adjusted_delta_t <<std::endl;
-    //   }
-    //   this->delta_t = adjusted_delta_t;
-    // }else if(max_m_C < 0.06 * this->max_C){
-    //   // increase time step if possible to accelerate computation
-    //   adjusted_delta_t = this->delta_t * 1.06;
-    //   if(this->verbosity > 1){
-    //     std::cout<<"  + Increased time step from " << this->delta_t << " to " << adjusted_delta_t <<std::endl;
-    //   }
-    //   this->delta_t = adjusted_delta_t;
-    // }
+    if(ats == adaptative_time_step::ON){
+      // CFL based adaptative time step
+      double max_m_C = this->compute_global_courant_number();
+      double adjusted_delta_t = this->delta_t;
+      if(this->verbosity > 1){
+        std::cout<<"    Computed global CFL = " << max_m_C << "; target max = " << this->max_C <<std::endl;
+      }
+      if(max_m_C > this->max_C){
+        // decrease time step due to excessive CFL
+        adjusted_delta_t = this->delta_t / (max_m_C * 100);
+        if(this->verbosity > 1){
+          std::cout<<"  - Decreased time step from " << this->delta_t << " to " << adjusted_delta_t <<std::endl;
+        }
+        this->delta_t = adjusted_delta_t;
+      }else if(max_m_C < 0.06 * this->max_C){
+        // increase time step if possible to accelerate computation
+        adjusted_delta_t = this->delta_t * 1.06;
+        if(this->verbosity > 1){
+          std::cout<<"  + Increased time step from " << this->delta_t << " to " << adjusted_delta_t <<std::endl;
+        }
+        this->delta_t = adjusted_delta_t;
+      }
+    }
 
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<"Stopping after first iteration.\n";
@@ -147,7 +159,13 @@ void Solver::solve(stopping_point s_p, linear_solver l_s){
     std::cout<<std::endl;
     std::cout<<"Done."<<std::endl;
     std::cout<<"Total computation duration: " << time3 - time2 <<std::endl;
+    std::cout<<std::endl;
+    std::cout<<"Predictor step total duration: " << this->time_predictor_step <<" ("<<this->time_predictor_step * 100/ (time3 - time2)<<" %)"<<std::endl;
+    std::cout<<"RHS assembly total duration: " << this->time_assemble_RHS <<" ("<<this->time_assemble_RHS * 100/ (time3 - time2)<<" %)"<<std::endl;
+    std::cout<<"Linear solver for poisson equation total duration: " << this->time_poisson_solve <<" ("<<this->time_poisson_solve * 100/ (time3 - time2)<<" %)"<<std::endl;
+    std::cout<<"Corrector step total duration: " << this->time_corrector_step <<" ("<<this->time_corrector_step * 100/ (time3 - time2)<<" %)"<<std::endl;
   }
+  timer.reset();
 }
 
 // computation of laplacian matrix
@@ -343,7 +361,7 @@ double Solver::compute_cell_courant_number(int i, int j){
 }
 
 double Solver::compute_global_courant_number(){
-  double max_C = std::numeric_limits<int>::max();
+  double max_C = std::numeric_limits<int>::min();
   for(int j = 1; j <= this->mesh.get_n_cells_y(); j++){
     for(int i = 1; i <= this->mesh.get_n_cells_x(); i++){
       double c = this->compute_cell_courant_number(i, j);
