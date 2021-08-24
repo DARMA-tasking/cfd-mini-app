@@ -32,6 +32,7 @@ RUN apt-get update -y -q && \
     qt5-qmake \
     qtbase5-dev-tools \
     googletest \
+    libgtest-dev \
     ccache && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
