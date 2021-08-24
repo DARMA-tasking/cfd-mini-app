@@ -313,8 +313,7 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
     KokkosBlas::axpy(alpha, direction, x);
 
     // update residual
-    Kokkos::deep_copy (residual, this->RHS);
-    KokkosBlas::gemv("N", - factor, this->laplacian, x, 1, residual);
+    KokkosBlas::axpy(-alpha, intermediate, residual);
     double new_rms2 = KokkosBlas::dot(residual, residual);
 
     // terminate early when possible
