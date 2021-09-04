@@ -5,18 +5,26 @@
 
 #include <Kokkos_Core.hpp>
 
+enum struct NodeEnum : int8_t {
+  INVALID = 0,
+  GHOST = 1,
+  SHARED_OWNED = 2,
+  INTERIOR = 3,
+  BOUNDARY = 4
+};
+
 class Mesh
 {
   public:
     Mesh(int n_x, int n_y, double cell_size)
       : n_cells_x(n_x)
       , n_cells_y(n_y)
-      , origin{0, 0}
+      , O{0, 0}
       , h(cell_size)
     {
       // instantiate containers for velocity and pressure
       this->pressure = Kokkos::View<double*>("pressure", n_x * n_y);
-      this->velocity = Kokkos::View<double**[2]>("velocity", n_x + 1, n_y + 1);
+      this->velocity = Kokkos::View<double*[2]>("velocity", (n_x + 1) * (n_y + 1));
     }
 
     // setter/getter for physical cell size
@@ -25,7 +33,7 @@ class Mesh
 
     // setter/getter for physical origin member variable
     void set_origin(double x, double y);
-    std::array<double,2> get_origin() {return this->origin; }
+    std::array<double,2> get_origin() {return this->O; }
 
     // setters/getters for number of mesh cells in each dimension
     void set_n_cells_x(int n_x) { this->n_cells_x = n_x; }
@@ -44,13 +52,14 @@ class Mesh
     // setters/getters for mesh data
     void set_pressure(int i, int j, double scalar);
     double get_pressure(int i, int j);
-    void set_velocity_x(int i, int j, double u);
-    void set_velocity_y(int i, int j, double v);
-    double get_velocity_x(int i, int j);
-    double get_velocity_y(int i, int j);
+
+    void set_velocity_u(int i, int j, double u);
+    void set_velocity_v(int i, int j, double v);
+    double get_velocity_u(int i, int j);
+    double get_velocity_v(int i, int j);
 
     // setter to assign new mesh point data
-    void set_velocity(Kokkos::View<double**[2]> v) { this->velocity = v; }
+    void set_velocity(Kokkos::View<double*[2]> v) { this->velocity = v; }
 
     // setter to assign new mesh cell data
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
@@ -60,7 +69,7 @@ class Mesh
 
   private:
     // physical origin f the mesh
-    std::array<double,2> origin;
+    std::array<double,2> O;
 
     // dimension characteristics of the mesh
     int n_cells_x = 3;
@@ -75,5 +84,5 @@ class Mesh
     Kokkos::View<double*> pressure = {};
 
     // mesh point data
-    Kokkos::View<double**[2]> velocity = {};
+    Kokkos::View<double*[2]> velocity = {};
 };
