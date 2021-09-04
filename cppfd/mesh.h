@@ -5,6 +5,14 @@
 
 #include <Kokkos_Core.hpp>
 
+enum struct NodeEnum : int8_t {
+  INVALID = 0,
+  GHOST = 1,
+  SHARED_OWNED = 2,
+  INTERIOR = 3,
+  BOUNDARY = 4
+};
+
 class Mesh
 {
   public:
