@@ -335,7 +335,7 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   return x;
 }
 
-//implementation of the poisson equation solver
+// implementation of the Poisson equation solver
 void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
   if(l_s == linear_solver::CONJUGATE_GRADIENT){
     this->mesh.set_pressure(this->conjugate_gradient_solve(r_tol));
@@ -347,10 +347,16 @@ void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
 
 // implementation of the corrector step
 void Solver::correct_velocity(){
+  double factor = .5 / this->mesh.get_cell_size();
+  double t_to_r = this->delta_t / this->rho;
   for(uint64_t j = 1; j < this->mesh.get_n_points_y() - 1; j++){
     for(uint64_t i = 1; i < this->mesh.get_n_points_x() - 1; i++){
-      this->mesh.set_velocity_u(i, j, (this->mesh.get_velocity_u(i, j) - (this->delta_t/this->rho) * (this->mesh.get_pressure(i, j) - this->mesh.get_pressure(i-1, j)) * 1/this->mesh.get_cell_size()));
-      this->mesh.set_velocity_v(i, j, (this->mesh.get_velocity_v(i, j) - (this->delta_t/this->rho) * (this->mesh.get_pressure(i, j) - this->mesh.get_pressure(i, j-1)) * 1/this->mesh.get_cell_size()));
+      double p_ur = this->mesh.get_pressure(i, j);
+      double p_ul = this->mesh.get_pressure(i-1, j);
+      double p_ll = this->mesh.get_pressure(i-1, j-1);
+      double p_lr = this->mesh.get_pressure(i, j-1);
+      this->mesh.set_velocity_u(i, j, (this->mesh.get_velocity_u(i, j) - t_to_r * (p_ur - p_ul + p_lr - p_ll) * factor));
+      this->mesh.set_velocity_v(i, j, (this->mesh.get_velocity_v(i, j) - t_to_r * (p_ur - p_lr + p_ul - p_ll) * factor));
     }
   }
 }
