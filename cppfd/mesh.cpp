@@ -64,21 +64,21 @@ double Mesh::get_pressure(int i, int j){
 // POINTS (VELOCITY)
 ////////////////////////////////////////////////////////////////
 
-void Mesh::set_velocity_u(int i, int j, double u){
+void Mesh::set_velocity_x(int i, int j, double u){
   int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1){
     this->velocity(k, 0) = u;
   }
 }
 
-void Mesh::set_velocity_v(int i, int j, double v){
+void Mesh::set_velocity_y(int i, int j, double v){
   int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1){
     this->velocity(k, 1) = v;
   }
 }
 
-double Mesh::get_velocity_u(int i, int j){
+double Mesh::get_velocity_x(int i, int j){
   int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1){
     return this->velocity(k, 0);
@@ -87,7 +87,7 @@ double Mesh::get_velocity_u(int i, int j){
   }
 }
 
-double Mesh::get_velocity_v(int i, int j){
+double Mesh::get_velocity_y(int i, int j){
   int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
   if(k != -1){
     return this->velocity(k, 1);
@@ -123,7 +123,7 @@ void Mesh::write_vtk(std::string file_name){
   point_data->SetNumberOfTuples((nx + 1) * (ny + 1));
   for(int j = 0; j < ny +1; j++){
     for(int i = 0; i < nx + 1; i++){
-      point_data->SetTuple3(j * (nx + 1) + i, this->get_velocity_u(i, j), this->get_velocity_v(i, j), 0);
+      point_data->SetTuple3(j * (nx + 1) + i, this->get_velocity_x(i, j), this->get_velocity_y(i, j), 0);
     }
   }
   ug->GetPointData()->SetVectors(point_data);

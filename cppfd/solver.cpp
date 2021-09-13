@@ -23,7 +23,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   if(s_p == stopping_point::AFTER_BOUNDARY_CONDITION){
     for(int j = 0; j < this->mesh.get_n_points_y(); j++){
       for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-        std::cout<<i<<" "<<j<<" : "<<this->mesh.get_velocity_u(i, j)<<" , "<<this->mesh.get_velocity_v(i, j)<<std::endl;
+        std::cout<<i<<" "<<j<<" : "<<this->mesh.get_velocity_x(i, j)<<" , "<<this->mesh.get_velocity_y(i, j)<<std::endl;
       }
     }
     return;
@@ -85,7 +85,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
       std::cout<<" predicted velocity:\n";
       for(int j = 0; j < this->mesh.get_n_points_y(); j++){
         for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-          std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_velocity_u(i, j)<<" , "<<this->mesh.get_velocity_v(i, j)<<std::endl;
+          std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_velocity_x(i, j)<<" , "<<this->mesh.get_velocity_y(i, j)<<std::endl;
         }
       }
     }
@@ -119,7 +119,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
       std::cout<<" corrected velocity:\n";
       for(int j = 0; j < this->mesh.get_n_points_y(); j++){
         for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-          std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_velocity_u(i, j)<<" , "<<this->mesh.get_velocity_v(i, j)<<std::endl;
+          std::cout<<"  "<<i<<" "<<j<<" : "<<this->mesh.get_velocity_x(i, j)<<" , "<<this->mesh.get_velocity_y(i, j)<<std::endl;
         }
       }
     }
@@ -228,23 +228,23 @@ void Solver::predict_velocity(){
   for(uint64_t j = 1; j < this->mesh.get_n_points_y() - 1; j++){
     for(uint64_t i = 1; i < this->mesh.get_n_points_x() - 1; i++){
       // factors needed to predict new u component
-      double v = 0.25 * (this->mesh.get_velocity_v(i-1, j) + this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i, j+1));
-      double dudx2 = (this->mesh.get_velocity_u(i-1, j) - 2 * this->mesh.get_velocity_u(i, j) + this->mesh.get_velocity_u(i+1, j)) * inv_size_sq;
-      double dudy2 = (this->mesh.get_velocity_u(i, j-1) - 2 * this->mesh.get_velocity_u(i, j) + this->mesh.get_velocity_u(i, j+1)) * inv_size_sq;
-      double dudx = this->mesh.get_velocity_u(i, j) * (this->mesh.get_velocity_u(i+1, j) - this->mesh.get_velocity_u(i-1, j)) * inv_size_db;
-      double dudy = v * (this->mesh.get_velocity_u(i, j+1) - this->mesh.get_velocity_u(i, j-1)) * inv_size_db;
+      double v = 0.25 * (this->mesh.get_velocity_y(i-1, j) + this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i, j+1));
+      double dudx2 = (this->mesh.get_velocity_x(i-1, j) - 2 * this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i+1, j)) * inv_size_sq;
+      double dudy2 = (this->mesh.get_velocity_x(i, j-1) - 2 * this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i, j+1)) * inv_size_sq;
+      double dudx = this->mesh.get_velocity_x(i, j) * (this->mesh.get_velocity_x(i+1, j) - this->mesh.get_velocity_x(i-1, j)) * inv_size_db;
+      double dudy = v * (this->mesh.get_velocity_x(i, j+1) - this->mesh.get_velocity_x(i, j-1)) * inv_size_db;
 
       // factors needed to predict new v component
-      double u = 0.25 * (this->mesh.get_velocity_u(i, j-1) + this->mesh.get_velocity_u(i, j) + this->mesh.get_velocity_u(i, j+1));
-      double dvdx2 = (this->mesh.get_velocity_v(i-1, j) - 2 * this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i+1, j)) * inv_size_sq;
-      double dvdy2 = (this->mesh.get_velocity_v(i, j-1) - 2 * this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i, j+1)) * inv_size_sq;
-      double dvdy = this->mesh.get_velocity_v(i, j) * (this->mesh.get_velocity_v(i+1, j) - this->mesh.get_velocity_v(i-1, j)) * inv_size_db;
-      double dvdx = u * (this->mesh.get_velocity_v(i, j+1) - this->mesh.get_velocity_v(i, j-1)) * inv_size_db;
+      double u = 0.25 * (this->mesh.get_velocity_x(i, j-1) + this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i, j+1));
+      double dvdx2 = (this->mesh.get_velocity_y(i-1, j) - 2 * this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i+1, j)) * inv_size_sq;
+      double dvdy2 = (this->mesh.get_velocity_y(i, j-1) - 2 * this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i, j+1)) * inv_size_sq;
+      double dvdy = this->mesh.get_velocity_y(i, j) * (this->mesh.get_velocity_y(i+1, j) - this->mesh.get_velocity_y(i-1, j)) * inv_size_db;
+      double dvdx = u * (this->mesh.get_velocity_y(i, j+1) - this->mesh.get_velocity_y(i, j-1)) * inv_size_db;
 
       // assign predicted u and v components to predicted_velocity storage
       uint64_t k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
-      predicted_velocity(k, 0) = this->mesh.get_velocity_u(i, j) + this->delta_t * (this->nu * (dudx2 + dudy2) - (this->mesh.get_velocity_u(i, j) * dudx + v * dudy));
-      predicted_velocity(k, 1) = this->mesh.get_velocity_v(i, j) + this->delta_t * (this->nu * (dvdx2 + dvdy2) - (this->mesh.get_velocity_v(i, j) * dvdx + u * dvdy));
+      predicted_velocity(k, 0) = this->mesh.get_velocity_x(i, j) + this->delta_t * (this->nu * (dudx2 + dudy2) - (this->mesh.get_velocity_x(i, j) * dudx + v * dudy));
+      predicted_velocity(k, 1) = this->mesh.get_velocity_y(i, j) + this->delta_t * (this->nu * (dvdx2 + dvdy2) - (this->mesh.get_velocity_y(i, j) * dvdx + u * dvdy));
     }
   }
 
@@ -252,8 +252,8 @@ void Solver::predict_velocity(){
   for(int j = 1; j < this->mesh.get_n_points_y() - 1; j++){
     for(int i = 1; i < this->mesh.get_n_points_x() - 1; i++){
       int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
-      this->mesh.set_velocity_u(i, j, predicted_velocity(k, 0));
-      this->mesh.set_velocity_v(i, j, predicted_velocity(k, 1));
+      this->mesh.set_velocity_x(i, j, predicted_velocity(k, 0));
+      this->mesh.set_velocity_y(i, j, predicted_velocity(k, 1));
     }
   }
 }
@@ -264,10 +264,10 @@ void Solver::assemble_poisson_RHS(){
   double factor = this->rho / this->delta_t;
   for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
     for(int i = 0; i < this->mesh.get_n_cells_x(); i++){
-      double u_r = this->mesh.get_velocity_u(i+1, j) + this->mesh.get_velocity_u(i+1, j+1);
-      double u_l = this->mesh.get_velocity_u(i, j) + this->mesh.get_velocity_u(i, j+1);
-      double v_t = this->mesh.get_velocity_v(i, j+1) + this->mesh.get_velocity_v(i+1, j+1);
-      double v_b = this->mesh.get_velocity_v(i, j) + this->mesh.get_velocity_v(i+1, j);
+      double u_r = this->mesh.get_velocity_x(i+1, j) + this->mesh.get_velocity_x(i+1, j+1);
+      double u_l = this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i, j+1);
+      double v_t = this->mesh.get_velocity_y(i, j+1) + this->mesh.get_velocity_y(i+1, j+1);
+      double v_b = this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i+1, j);
       double inv_h = 1 / (2 * this->mesh.get_cell_size());
       uint64_t k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
       this->RHS(k) = factor * ((u_r - u_l + v_t - v_b) * inv_h);
@@ -355,14 +355,14 @@ void Solver::correct_velocity(){
       double p_ul = this->mesh.get_pressure(i-1, j);
       double p_ll = this->mesh.get_pressure(i-1, j-1);
       double p_lr = this->mesh.get_pressure(i, j-1);
-      this->mesh.set_velocity_u(i, j, (this->mesh.get_velocity_u(i, j) - t_to_r * (p_ur - p_ul + p_lr - p_ll) * factor));
-      this->mesh.set_velocity_v(i, j, (this->mesh.get_velocity_v(i, j) - t_to_r * (p_ur - p_lr + p_ul - p_ll) * factor));
+      this->mesh.set_velocity_x(i, j, (this->mesh.get_velocity_x(i, j) - t_to_r * (p_ur - p_ul + p_lr - p_ll) * factor));
+      this->mesh.set_velocity_y(i, j, (this->mesh.get_velocity_y(i, j) - t_to_r * (p_ur - p_lr + p_ul - p_ll) * factor));
     }
   }
 }
 
 double Solver::compute_cell_courant_number(int i, int j){
-  return (this->mesh.get_velocity_u(i, j) + this->mesh.get_velocity_v(i, j)) * this->delta_t / this->mesh.get_cell_size();
+  return (this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_y(i, j)) * this->delta_t / this->mesh.get_cell_size();
 }
 
 double Solver::compute_global_courant_number(){
