@@ -45,10 +45,10 @@ class Mesh
     void set_pressure(int i, int j, double scalar);
     double get_pressure(int i, int j);
 
-    void set_velocity_u(int i, int j, double u);
-    void set_velocity_v(int i, int j, double v);
-    double get_velocity_u(int i, int j);
-    double get_velocity_v(int i, int j);
+    void set_velocity_x(int i, int j, double u);
+    void set_velocity_y(int i, int j, double v);
+    double get_velocity_x(int i, int j);
+    double get_velocity_y(int i, int j);
 
     // setter to assign new mesh point data
     void set_velocity(Kokkos::View<double*[2]> v) { this->velocity = v; }
