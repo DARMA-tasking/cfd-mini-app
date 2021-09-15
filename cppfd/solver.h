@@ -41,7 +41,8 @@ class Solver
     // allow for different linear solvers for the pressure
     enum struct linear_solver: uint8_t{
       NONE,
-      CONJUGATE_GRADIENT
+      CONJUGATE_GRADIENT,
+      GAUSS_SEIDEL
     };
 
     // allow for adaptative time stepping to be enabled/disabled
@@ -51,7 +52,7 @@ class Solver
     };
 
     // main solver routine
-    void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::CONJUGATE_GRADIENT, adaptative_time_step ats = adaptative_time_step::OFF);
+    void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::GAUSS_SEIDEL, adaptative_time_step ats = adaptative_time_step::OFF);
 
   private:
     // assemble Laplacian matrix for Poisson solver
