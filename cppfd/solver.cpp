@@ -339,8 +339,9 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
 void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
   if(l_s == linear_solver::CONJUGATE_GRADIENT){
     this->mesh.set_pressure(this->conjugate_gradient_solve(r_tol));
-  }
-  else{
+  } else if(l_s == linear_solver::GAUSS_SEIDEL){
+    std::cout<<"  calling Gauss-Seidel solver"<<std::endl;
+  } else{
     std::cout<<"  pressure Poisson equation ignored"<<std::endl;
   }
 }
