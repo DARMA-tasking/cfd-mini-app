@@ -17,8 +17,8 @@
 ////////////////////////////////////////////////////////////////
 
 void Mesh::set_origin(double x, double y){
-  this->O[0] = x;
-  this->O[1] = y;
+  this->origin[0] = x;
+  this->origin[1] = y;
 }
 
 std::array<int,2> Mesh::index_to_cartesian(int k, int n, int nmax){
@@ -96,8 +96,8 @@ void Mesh::write_vtk(std::string file_name){
   vtkNew<vtkUniformGrid> ug;
   uint64_t nx = this->n_cells_x;
   uint64_t ny = this->n_cells_y;
-  ug->SetDimensions(nx+1, ny+1, 1);
-  ug->SetOrigin(this->O[0], this->O[0], 0);
+  ug->SetDimensions(nx + 1, ny + 1, 1);
+  ug->SetOrigin(this->origin[0], this->origin[0], 0);
   ug->SetSpacing(this->h, this->h, 0);
 
   // create cell centered scalar field

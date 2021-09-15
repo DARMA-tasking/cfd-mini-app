@@ -11,7 +11,7 @@ class Mesh
     Mesh(int n_x, int n_y, double cell_size)
       : n_cells_x(n_x)
       , n_cells_y(n_y)
-      , O{0, 0}
+      , origin{0, 0}
       , h(cell_size)
     {
       // instantiate containers for velocity and pressure
@@ -25,7 +25,7 @@ class Mesh
 
     // setter/getter for physical origin member variable
     void set_origin(double x, double y);
-    std::array<double,2> get_origin() {return this->O; }
+    std::array<double,2> get_origin() {return this->origin; }
 
     // setters/getters for number of mesh cells in each dimension
     void set_n_cells_x(int n_x) { this->n_cells_x = n_x; }
@@ -60,7 +60,7 @@ class Mesh
 
   private:
     // physical origin f the mesh
-    std::array<double,2> O;
+    std::array<double,2> origin;
 
     // dimension characteristics of the mesh
     int n_cells_x = 3;
