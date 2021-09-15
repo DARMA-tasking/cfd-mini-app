@@ -17,8 +17,8 @@
 ////////////////////////////////////////////////////////////////
 
 void Mesh::set_origin(double x, double y){
-  this->O[0] = x;
-  this->O[1] = y;
+  this->origin[0] = x;
+  this->origin[1] = y;
 }
 
 std::array<int,2> Mesh::index_to_cartesian(int k, int n, int nmax){
@@ -65,32 +65,28 @@ double Mesh::get_pressure(int i, int j){
 ////////////////////////////////////////////////////////////////
 
 void Mesh::set_velocity_x(int i, int j, double u){
-  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
-  if(k != -1){
-    this->velocity(k, 0) = u;
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+    this->velocity(i, j, 0) = u;
   }
 }
 
 void Mesh::set_velocity_y(int i, int j, double v){
-  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
-  if(k != -1){
-    this->velocity(k, 1) = v;
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+    this->velocity(i, j, 1) = v;
   }
 }
 
 double Mesh::get_velocity_x(int i, int j){
-  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
-  if(k != -1){
-    return this->velocity(k, 0);
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+    return this->velocity(i, j, 0);
   } else{
     return std::nan("");
   }
 }
 
 double Mesh::get_velocity_y(int i, int j){
-  int k = this->cartesian_to_index(i, j, this->get_n_points_x(), this->get_n_points_y());
-  if(k != -1){
-    return this->velocity(k, 1);
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+    return this->velocity(i, j, 1);
   } else{
     return std::nan("");
   }
@@ -100,8 +96,8 @@ void Mesh::write_vtk(std::string file_name){
   vtkNew<vtkUniformGrid> ug;
   uint64_t nx = this->n_cells_x;
   uint64_t ny = this->n_cells_y;
-  ug->SetDimensions(nx+1, ny+1, 1);
-  ug->SetOrigin(this->O[0], this->O[0], 0);
+  ug->SetDimensions(nx + 1, ny + 1, 1);
+  ug->SetOrigin(this->origin[0], this->origin[0], 0);
   ug->SetSpacing(this->h, this->h, 0);
 
   // create cell centered scalar field
