@@ -82,18 +82,16 @@ class Solver
     // reference to mesh onto which solve is performed
     Mesh& mesh;
 
-    // physics and simulation control related variables
+    // default physics variable values
     double nu = 0.0008;
     double rho = 1.225;
     double delta_t = 0.001;
     double t_final = 0.001;
     double max_C = 0.5;
     double Re = 100;
+
+    // default verbosity level
     int verbosity = 1;
-    double time_predictor_step = 0;
-    double time_assemble_RHS = 0;
-    double time_poisson_solve = 0;
-    double time_corrector_step = 0;
 
     // laplacian matrix and its inverse
     Kokkos::View<double**> laplacian = {};
