@@ -63,10 +63,15 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     std::cout<<"Running simulation..."<<std::endl;
   }
 
-  double t = 0;
-  int iteration = 0;
+  // initialize counters
+  double t = 0.;
+  double time_predictor_step = 0.;
+  double time_assemble_RHS = 0.;
+  double time_poisson_solve = 0.;
+  double time_corrector_step = 0.;
 
   //start iterating on time steps
+  int iteration = 0;
   while(t < this->t_final){
     ++iteration;
     t += this->delta_t;
@@ -78,9 +83,10 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     // run all necessary solving steps
     Kokkos::Timer timer2;
 
+    // predict velocity without pressure
     this->predict_velocity();
     double time_post_predict = timer2.seconds();
-    this->time_predictor_step += time_post_predict;
+    time_predictor_step += time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" predicted velocity:\n";
       for(int j = 0; j < this->mesh.get_n_points_y(); j++){
@@ -90,9 +96,10 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
       }
     }
 
+    // assemble PPE RHS
     this->assemble_poisson_RHS();
     double time_post_RHS = timer2.seconds();
-    this->time_assemble_RHS += time_post_RHS - time_post_predict;
+    time_assemble_RHS += time_post_RHS - time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" RHS:\n";
       for(int k = 0; k < this->RHS.extent(0); k++){
@@ -100,9 +107,10 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
       }
     }
 
+    // solve PPE
     this->poisson_solve_pressure(1e-6, l_s);
     double time_post_poisson_solve = timer2.seconds();
-    this->time_poisson_solve += time_post_poisson_solve - time_post_RHS;
+    time_poisson_solve += time_post_poisson_solve - time_post_RHS;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" pressure:\n";
       for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
@@ -112,9 +120,10 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
       }
     }
 
+    // correct velocity with pressure
     this->correct_velocity();
     double time_post_correct = timer2.seconds();
-    this->time_corrector_step += time_post_correct - time_post_poisson_solve;
+    time_corrector_step += time_post_correct - time_post_poisson_solve;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout<<" corrected velocity:\n";
       for(int j = 0; j < this->mesh.get_n_points_y(); j++){
@@ -156,14 +165,37 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
 
   double time3 = timer.seconds();
   if(this->verbosity > 0){
-    std::cout<<std::endl;
-    std::cout<<"Done."<<std::endl;
-    std::cout<<"Total computation duration: " << time3 - time2 <<std::endl;
-    std::cout<<std::endl;
-    std::cout<<"Predictor step total duration: " << this->time_predictor_step <<" ("<<this->time_predictor_step * 100/ (time3 - time2)<<" %)"<<std::endl;
-    std::cout<<"RHS assembly total duration: " << this->time_assemble_RHS <<" ("<<this->time_assemble_RHS * 100/ (time3 - time2)<<" %)"<<std::endl;
-    std::cout<<"Linear solver for poisson equation total duration: " << this->time_poisson_solve <<" ("<<this->time_poisson_solve * 100/ (time3 - time2)<<" %)"<<std::endl;
-    std::cout<<"Corrector step total duration: " << this->time_corrector_step <<" ("<<this->time_corrector_step * 100/ (time3 - time2)<<" %)"<<std::endl;
+    std::cout << std::endl;
+    std::cout << "Done."
+	      << std::endl;
+    std::cout << "Total computation duration: "
+	      << time3 - time2
+	      << std::endl;
+    std::cout << std::endl;
+    std::cout << "Predictor step total duration: "
+	      << time_predictor_step
+	      << " ("
+	      << time_predictor_step * 100 / (time3 - time2)
+	      << " %)"
+	      << std::endl;
+    std::cout << "RHS assembly total duration: "
+	      << time_assemble_RHS
+	      << " ("
+	      << time_assemble_RHS * 100 / (time3 - time2)
+	      << " %)"
+	      << std::endl;
+    std::cout << "Linear solver for poisson equation total duration: "
+	      << time_poisson_solve
+	      << " ("
+	      << time_poisson_solve * 100 / (time3 - time2)
+	      << " %)"
+	      << std::endl;
+    std::cout << "Corrector step total duration: "
+	      << time_corrector_step
+	      << " ("
+	      << time_corrector_step * 100 / (time3 - time2)
+	      << " %)"
+	      << std::endl;
   }
   timer.reset();
 }
