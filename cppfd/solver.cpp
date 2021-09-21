@@ -7,6 +7,8 @@
 #include <KokkosBlas2_gemv.hpp>
 #include <KokkosBlas3_gemm.hpp>
 
+#include "KokkosSparse_CrsMatrix.hpp"
+
 // main function to solve N-S equation on time steps
 void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step ats){
   // begin simulation
@@ -202,19 +204,51 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
 
 // computation of laplacian matrix
 void Solver::assemble_laplacian(){
-  // initialize container for Laplacian
-  const int m = this->mesh.get_n_cells_x();
-  const int n = this->mesh.get_n_cells_y();
-  const int mn = m * n;
-  this->laplacian = Kokkos::View<double**>("laplacian", mn, mn);
+  using device_type = typename Kokkos::Device<Kokkos::DefaultExecutionSpace, typename Kokkos::DefaultExecutionSpace::memory_space>;
+  using matrix_type = typename KokkosSparse::CrsMatrix<double, uint64_t, device_type, void, uint64_t>;
 
+  // initialize containers for sparse storage of Laplacian
+  const uint64_t m = this->mesh.get_n_cells_x();
+  const uint64_t n = this->mesh.get_n_cells_y();
+  const uint64_t mn = m * n;
+  const uint64_t nnz = 5 * mn - 2 * (m + n);
+  this->laplacian = Kokkos::View<double**>("laplacian", mn, mn);
+  Kokkos::View<uint64_t*> row_ptrs("row pointers", mn + 1);
+  Kokkos::View<uint64_t*> col_ids("column indices", nnz);
+  Kokkos::View<double*> values("values", nnz);
+
+  // iterate m*n over cells to construct mn*mn Laplacian
+  uint64_t idx = 0;
   for(int j = 0; j < n; j++){
     for(int i = 0; i < m; i++){
       int k = this->mesh.cartesian_to_index(i, j, m, n);
-      // initialize diagonal value
-      int v = -4;
+      bool first_in_row = true;
+      // assign below diagonal entries when relevant
+      if(j > 0)
+      {
+        if (first_in_row)
+        {
+	  row_ptrs[k] = idx;
+	  first_in_row =  false;
+	}
+	col_ids[idx] = k - m;
+	values[idx++] = 1;
+        this->laplacian(k, k - m) = 1;
+      }
+      if(i > 0)
+      {
+        if (first_in_row)
+        {
+	  row_ptrs[k] = idx;
+	  first_in_row =  false;
+	}
+	col_ids[idx] = k - 1;
+	values[idx++] = 1;
+        this->laplacian(k, k - 1) = 1;
+      }
 
-      // detect corners and borders
+      // assign diagonal entry
+      int v = -4;
       if(i == 0 || i == m - 1)
       {
         ++v;
@@ -223,29 +257,71 @@ void Solver::assemble_laplacian(){
       {
         ++v;
       }
-
-      // assign diagonal entry
+      if (first_in_row)
+      {
+	row_ptrs[k] = idx;
+	first_in_row =  false;
+      }
+      col_ids[idx] = k;
+      values[idx++] = v;
       this->laplacian(k, k) = v;
 
-      // assign unit entries
-      if(i > 0)
-      {
-        this->laplacian(k, k-1) = 1;
-      }
+      // assign above diagonal entries when relevant
       if(i < m - 1)
       {
+        if (first_in_row)
+        {
+	  row_ptrs[k] = idx;
+	  first_in_row =  false;
+	}
+	col_ids[idx] = k + 1;
+	values[idx++] = 1;
         this->laplacian(k, k + 1) = 1;
-      }
-      if(j > 0)
-      {
-        this->laplacian(k, k - m) = 1;
       }
       if(j < n - 1)
       {
+        if (first_in_row)
+        {
+	  row_ptrs[k] = idx;
+	  first_in_row =  false;
+	}
+	col_ids[idx] = k + m;
+	values[idx++] = 1;
         this->laplacian(k, k + m) = 1;
       }
     }
   }
+  // append NNZ at end of row pointers
+  row_ptrs[mn] = nnz;
+
+  // instantiate CRS matrix
+  typename matrix_type::staticcrsgraph_type mygraph(col_ids, row_ptrs);
+  matrix_type mymatrix("Laplacian", mn, values, mygraph);
+  std::cout<<" "<<mymatrix.numRows()<<std::endl;
+  std::cout<<" "<<mymatrix.numCols()<<std::endl;
+  std::cout<<" "<<mymatrix.nnz()<<std::endl;
+  std::cout<<std::endl;
+
+  for(int j = 0; j < mn; j++){
+    for(int i = 0; i < mn; i++){
+      std::cout<<" "<<this->laplacian(i,j);
+    }
+    std::cout<<std::endl;
+  }
+  std::cout<<std::endl;
+
+  for(int k = 0; k < mn+1; k++){
+    std::cout<<" "<<row_ptrs[k];
+  }
+  std::cout<<std::endl;
+  for(int k = 0; k < nnz; k++){
+    std::cout<<" "<<col_ids[k];
+  }
+  std::cout<<std::endl;
+  for(int k = 0; k < nnz; k++){
+    std::cout<<" "<<values[k];
+  }
+  std::cout<<std::endl;
 }
 
 // implementation of the predictor step
@@ -372,6 +448,7 @@ void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
   if(l_s == linear_solver::CONJUGATE_GRADIENT){
     this->mesh.set_pressure(this->conjugate_gradient_solve(r_tol));
   } else if(l_s == linear_solver::GAUSS_SEIDEL){
+    return;
     std::cout<<"  calling Gauss-Seidel solver"<<std::endl;
   } else{
     std::cout<<"  pressure Poisson equation ignored"<<std::endl;
