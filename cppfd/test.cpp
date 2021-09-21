@@ -17,7 +17,7 @@ int main(int argc, char** argv) {
   double delta_t = 0.001;
   double t_final = 0.1;
   double max_C = 0.5;
-  uint64_t n_cells = 10;
+  uint64_t n_cells = 3;
 
   // create mesh
   Mesh mesh(n_cells, n_cells, 1. / n_cells);
