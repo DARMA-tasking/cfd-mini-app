@@ -7,9 +7,13 @@
 #include <map>
 
 #include <Kokkos_Core.hpp>
+#include <KokkosSparse_CrsMatrix.hpp>
 
 #include "mesh.h"
 #include "boundaryconditions.h"
+
+using device_type = typename Kokkos::Device<Kokkos::DefaultExecutionSpace, typename Kokkos::DefaultExecutionSpace::memory_space>;
+using matrix_type = typename KokkosSparse::CrsMatrix<double, uint64_t, device_type, void, uint64_t>;
 
 class Solver
 {
@@ -27,8 +31,8 @@ class Solver
       this->nu = d_v / r;
     }
 
-    // getter for the laplacian for unit testing
-    Kokkos::View<double**> get_laplacian() {return this->laplacian;}
+    // getter for the Laplacian for unit testing
+    matrix_type get_Laplacian() {return this->Laplacian;}
 
     // provide stopping points for debugging purposes
     enum struct stopping_point: uint8_t{
@@ -56,7 +60,7 @@ class Solver
 
   private:
     // assemble Laplacian matrix for Poisson solver
-    void assemble_laplacian();
+    void assemble_Laplacian();
 
     // compute predicted velocities without pressure term
     void predict_velocity();
@@ -93,8 +97,8 @@ class Solver
     // default verbosity level
     int verbosity = 1;
 
-    // laplacian matrix and its inverse
-    Kokkos::View<double**> laplacian = {};
+    // Laplacian matrix and its inverse
+    matrix_type Laplacian = {};
 
     // poisson equation right hand side vector
     Kokkos::View<double*> RHS = {};
