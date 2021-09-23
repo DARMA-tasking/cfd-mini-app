@@ -1,9 +1,9 @@
+#include "mesh.h"
+
 #include <iostream>
 #include <array>
 #include <cmath>
 #include <Kokkos_Core.hpp>
-
-#include "mesh.h"
 
 #include <vtkDoubleArray.h>
 #include <vtkCellData.h>

@@ -1,13 +1,11 @@
-#include <Kokkos_Core.hpp>
-
 #include "solver.h"
 
+#include <Kokkos_Core.hpp>
 #include <KokkosBlas1_axpby.hpp>
 #include <KokkosBlas1_dot.hpp>
-#include <KokkosBlas2_gemv.hpp>
-#include <KokkosBlas3_gemm.hpp>
 
 #include "KokkosSparse_CrsMatrix.hpp"
+#include "KokkosSparse_spmv.hpp"
 
 // main function to solve N-S equation on time steps
 void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step ats){
@@ -42,20 +40,28 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   double time1 = timer.seconds();
   if(this->verbosity > 0){
     std::cout<<std::endl;
-    std::cout<<"Computing laplacian matrix..."<<std::endl;
+    std::cout<<"Computing Laplacian matrix..."<<std::endl;
   }
 
-  this->assemble_laplacian();
+  this->assemble_Laplacian();
   double time2 = timer.seconds();
   if(this->verbosity > 0){
-    std::cout<<"Laplacian computation duration: " << time2 - time1 <<std::endl;
+    std::cout<<"Laplacian computation duration: " << time2 - time1 << std::endl;
   }
   if(s_p == stopping_point::AFTER_LAPLACIAN){
-    for(int j = 0 ; j<this->laplacian.extent(1); j++){
-      for(int i = 0; i < this->laplacian.extent(0); i++){
-        std::cout<<" "<<this->laplacian(i, j);
+    for (uint64_t j = 0; j < this->Laplacian.numRows(); j++) {
+      auto row = this->Laplacian.row(j);
+      uint64_t i = 0;
+      for (uint64_t k = 0; k < row.length; k++) {
+	auto val = row.value(k);
+	auto col = row.colidx(k);
+	while (i++ < col)
+	  std::cout << 0 << " ";
+	std::cout << val << " ";
       }
-      std::cout<<std::endl;
+      while (i++ < this->Laplacian.numCols())
+	std::cout << 0 << " ";
+      std::cout << std::endl;
     }
     return;
   }
@@ -202,17 +208,13 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   timer.reset();
 }
 
-// computation of laplacian matrix
-void Solver::assemble_laplacian(){
-  using device_type = typename Kokkos::Device<Kokkos::DefaultExecutionSpace, typename Kokkos::DefaultExecutionSpace::memory_space>;
-  using matrix_type = typename KokkosSparse::CrsMatrix<double, uint64_t, device_type, void, uint64_t>;
-
+// computation of Laplacian matrix
+void Solver::assemble_Laplacian(){
   // initialize containers for sparse storage of Laplacian
   const uint64_t m = this->mesh.get_n_cells_x();
   const uint64_t n = this->mesh.get_n_cells_y();
   const uint64_t mn = m * n;
   const uint64_t nnz = 5 * mn - 2 * (m + n);
-  this->laplacian = Kokkos::View<double**>("laplacian", mn, mn);
   Kokkos::View<uint64_t*> row_ptrs("row pointers", mn + 1);
   Kokkos::View<uint64_t*> col_ids("column indices", nnz);
   Kokkos::View<double*> values("values", nnz);
@@ -233,7 +235,6 @@ void Solver::assemble_laplacian(){
 	}
 	col_ids[idx] = k - m;
 	values[idx++] = 1;
-        this->laplacian(k, k - m) = 1;
       }
       if(i > 0)
       {
@@ -244,7 +245,6 @@ void Solver::assemble_laplacian(){
 	}
 	col_ids[idx] = k - 1;
 	values[idx++] = 1;
-        this->laplacian(k, k - 1) = 1;
       }
 
       // assign diagonal entry
@@ -264,7 +264,6 @@ void Solver::assemble_laplacian(){
       }
       col_ids[idx] = k;
       values[idx++] = v;
-      this->laplacian(k, k) = v;
 
       // assign above diagonal entries when relevant
       if(i < m - 1)
@@ -276,7 +275,6 @@ void Solver::assemble_laplacian(){
 	}
 	col_ids[idx] = k + 1;
 	values[idx++] = 1;
-        this->laplacian(k, k + 1) = 1;
       }
       if(j < n - 1)
       {
@@ -287,41 +285,15 @@ void Solver::assemble_laplacian(){
 	}
 	col_ids[idx] = k + m;
 	values[idx++] = 1;
-        this->laplacian(k, k + m) = 1;
       }
     }
   }
   // append NNZ at end of row pointers
   row_ptrs[mn] = nnz;
 
-  // instantiate CRS matrix
+  // instantiate Laplacian as CRS matrix
   typename matrix_type::staticcrsgraph_type mygraph(col_ids, row_ptrs);
-  matrix_type mymatrix("Laplacian", mn, values, mygraph);
-  std::cout<<" "<<mymatrix.numRows()<<std::endl;
-  std::cout<<" "<<mymatrix.numCols()<<std::endl;
-  std::cout<<" "<<mymatrix.nnz()<<std::endl;
-  std::cout<<std::endl;
-
-  for(int j = 0; j < mn; j++){
-    for(int i = 0; i < mn; i++){
-      std::cout<<" "<<this->laplacian(i,j);
-    }
-    std::cout<<std::endl;
-  }
-  std::cout<<std::endl;
-
-  for(int k = 0; k < mn+1; k++){
-    std::cout<<" "<<row_ptrs[k];
-  }
-  std::cout<<std::endl;
-  for(int k = 0; k < nnz; k++){
-    std::cout<<" "<<col_ids[k];
-  }
-  std::cout<<std::endl;
-  for(int k = 0; k < nnz; k++){
-    std::cout<<" "<<values[k];
-  }
-  std::cout<<std::endl;
+  this->Laplacian = matrix_type("Laplacian", mn, values, mygraph);
 }
 
 // implementation of the predictor step
@@ -387,13 +359,14 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   // initialize approximate solution with null guess
   uint64_t n_x = this->mesh.get_n_cells_x();
   uint64_t n_y = this->mesh.get_n_cells_y();
-  Kokkos::View<double*> x("x", n_x * n_y);
+  uint64_t mn = n_x * n_y;
+  Kokkos::View<double*> x("x", mn);
 
   // initialize residual
   Kokkos::View<double*> residual("residual", n_x * n_y);
   Kokkos::deep_copy (residual, this->RHS);
   double factor = 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
-  KokkosBlas::gemv("N", - factor, this->laplacian, x, 1, residual);
+  KokkosSparse::spmv("N", - factor, this->Laplacian, x, 1, residual);
   double rms2 = KokkosBlas::dot(residual, residual);
 
   // compute square norm of RHS for relative error
@@ -408,13 +381,13 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   Kokkos::View<double*> direction("direction", n_x * n_y);
   Kokkos::deep_copy (direction, residual);
 
-  // storage for laplacian dot direction intermediate vector
+  // storage for Laplacian dot direction intermediate vector
   Kokkos::View<double*> intermediate("intermediate", n_x * n_y);
 
   // iterate for at most the dimension of the matrix
-  for(int k = 0; k < this->laplacian.extent(0); k++){
+  for(int k = 0; k < mn; k++){
     // compute step length
-    KokkosBlas::gemv("N", factor, this->laplacian, direction, 0, intermediate);
+    KokkosSparse::spmv("N", factor, this->Laplacian, direction, 0, intermediate);
     double alpha = rms2 / KokkosBlas::dot(direction, intermediate);
 
     // update solution
