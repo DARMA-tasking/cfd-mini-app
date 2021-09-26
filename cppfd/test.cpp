@@ -18,7 +18,16 @@ int main(int argc, char** argv) {
   double t_final = 0.1;
   double max_C = 0.5;
   uint64_t n_cells = 30;
-
+  std::cout << "Input parameters:"
+	    << "\n  density: " << density
+	    << "\n  dynamic_viscosity: " << dynamic_viscosity
+	    << "\n  delta_t: " << delta_t
+	    << "\n  t_final: " << t_final
+	    << "\n  max_C: " << max_C 
+	    << "\n  n_cells:: " << n_cells
+	    << "x" << n_cells << " = "
+	    << n_cells * n_cells << "\n";
+ 
   // create mesh
   Mesh mesh(n_cells, n_cells, 1. / n_cells);
 
