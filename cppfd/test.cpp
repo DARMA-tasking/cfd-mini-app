@@ -26,7 +26,7 @@ int main(int argc, char** argv) {
 	    << "\n  max_C: " << max_C 
 	    << "\n  n_cells:: " << n_cells
 	    << "x" << n_cells << " = "
-	    << n_cells * n_cells << "\n";
+	    << n_cells * n_cells << "\n\n";
  
   // create mesh
   Mesh mesh(n_cells, n_cells, 1. / n_cells);
@@ -46,7 +46,7 @@ int main(int argc, char** argv) {
 
   // run numerical scheme
   Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
-  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::CONJUGATE_GRADIENT, Solver::adaptative_time_step::ON);
+  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
   // save results
   mesh.write_vtk("test.vti");

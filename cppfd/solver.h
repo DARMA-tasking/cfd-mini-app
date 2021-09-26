@@ -12,9 +12,6 @@
 #include "mesh.h"
 #include "boundaryconditions.h"
 
-using device_type = typename Kokkos::Device<Kokkos::DefaultExecutionSpace, typename Kokkos::DefaultExecutionSpace::memory_space>;
-using matrix_type = typename KokkosSparse::CrsMatrix<double, uint64_t, device_type, void, uint64_t>;
-
 class Solver
 {
   public:
@@ -30,9 +27,6 @@ class Solver
       // compute and store kinematic viscosity
       this->nu = d_v / r;
     }
-
-    // getter for the Laplacian for unit testing
-    matrix_type get_Laplacian() {return this->Laplacian;}
 
     // provide stopping points for debugging purposes
     enum struct stopping_point: uint8_t{
@@ -55,12 +49,20 @@ class Solver
       OFF
     };
 
+    // getter for the Laplacian for unit testing
+    using exec_space = typename Kokkos::DefaultExecutionSpace;
+    using mem_space = typename exec_space::memory_space;
+    using device_type = typename Kokkos::
+      Device<Kokkos::DefaultExecutionSpace, mem_space>;
+  using matrix_type = typename KokkosSparse::CrsMatrix<double, uint64_t, device_type, void, uint64_t>;
+    matrix_type get_Laplacian() {return this->Laplacian;}
+
     // main solver routine
     void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::GAUSS_SEIDEL, adaptative_time_step ats = adaptative_time_step::OFF);
 
   private:
-    // assemble Laplacian matrix for Poisson solver
-    void assemble_Laplacian();
+    // assemble Laplacian matrix for Poisson solver and return density
+    double assemble_Laplacian();
 
     // compute predicted velocities without pressure term
     void predict_velocity();
@@ -68,8 +70,11 @@ class Solver
     // build poisson equation right hand side vector
     void assemble_poisson_RHS();
 
-    // conjugate gradient based solver
+    // conjugate gradient solver
     Kokkos::View<double*> conjugate_gradient_solve(double r_tol);
+
+    // Gauss-Seidel solver
+    Kokkos::View<double*> gauss_seidel_solve(double r_tol);
 
     // solve poisson pressure equation using conjugate gradient method
     void poisson_solve_pressure(double r_tol, linear_solver l_s);
