@@ -70,14 +70,14 @@ class Solver
     // build poisson equation right hand side vector
     void assemble_poisson_RHS();
 
+    // solve poisson pressure equation using conjugate gradient method
+    void poisson_solve_pressure(double r_tol, linear_solver l_s);
+
     // conjugate gradient solver
     Kokkos::View<double*> conjugate_gradient_solve(double r_tol);
 
     // Gauss-Seidel solver
-    Kokkos::View<double*> gauss_seidel_solve(double r_tol);
-
-    // solve poisson pressure equation using conjugate gradient method
-    void poisson_solve_pressure(double r_tol, linear_solver l_s);
+    Kokkos::View<double*> gauss_seidel_solve(double r_tol, int max_it, int n_sweeps);
 
     // apply corrector step
     void correct_velocity();

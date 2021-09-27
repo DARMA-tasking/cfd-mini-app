@@ -1,7 +1,9 @@
 #include "solver.h"
 
 #include <Kokkos_Core.hpp>
+
 #include <KokkosBlas1_axpby.hpp>
+#include <KokkosBlas1_nrm2_squared.hpp>
 #include <KokkosBlas1_dot.hpp>
 
 #include "KokkosSparse_CrsMatrix.hpp"
@@ -12,19 +14,19 @@
 void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step ats){
   // begin simulation
   if(this->verbosity >= 1){
-    std::cout<< "Initial timestep : " << this->delta_t << ", " << "Time final : " << this->t_final << std::endl;
+    std::cout << "Initial timestep : " << this->delta_t << ", " << "Time final : " << this->t_final << std::endl;
   }
 
   Kokkos::Timer timer;
 
   if(this->verbosity >= 1){
-    std::cout<< "Applying velocity boundary conditions..." << std::endl;
+    std::cout << "Applying velocity boundary conditions..." << std::endl;
   }
   this->boundary_conditions.apply_velocity_bc();
   if(s_p == stopping_point::AFTER_BOUNDARY_CONDITION){
     for(int j = 0; j < this->mesh.get_n_points_y(); j++){
       for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-        std::cout<< i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
+        std::cout << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
       }
     }
     return;
@@ -40,16 +42,16 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
 
   double time1 = timer.seconds();
   if(this->verbosity > 0){
-    std::cout<< std::endl;
-    std::cout<< "Computing Laplacian matrix..." << std::endl;
+    std::cout << std::endl;
+    std::cout << "Computing Laplacian matrix..." << std::endl;
   }
 
   double lap_d = this->assemble_Laplacian();
   double time2 = timer.seconds();
   if(this->verbosity > 0){
-    std::cout<< "Laplacian density: " << std::setprecision (4)
+    std::cout << "Laplacian density: " << std::setprecision (4)
 	     << 100. * lap_d << " %\n";
-    std::cout<< "Laplacian computation duration: " << time2 - time1 << std::endl;
+    std::cout << "Laplacian computation duration: " << time2 - time1 << std::endl;
   }
   if(s_p == stopping_point::AFTER_LAPLACIAN){
     for (uint64_t j = 0; j < this->Laplacian.numRows(); j++) {
@@ -70,8 +72,8 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   }
 
   if(this->verbosity > 0){
-    std::cout<< std::endl;
-    std::cout<< "Running simulation..." << std::endl;
+    std::cout << std::endl;
+    std::cout << "Running simulation..." << std::endl;
   }
 
   // initialize counters
@@ -88,7 +90,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     t += this->delta_t;
 
     if(this->verbosity > 1){
-      std::cout<< "Entering iteration " << iteration << " at time " << t << std::endl;
+      std::cout << "Entering iteration " << iteration << " at time " << t << std::endl;
     }
 
     // run all necessary solving steps
@@ -99,10 +101,10 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     double time_post_predict = timer2.seconds();
     time_predictor_step += time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout<< " predicted velocity:\n";
-      for(int j = 0; j < this->mesh.get_n_points_y(); j++){
-        for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-          std::cout<< "  " << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
+      std::cout << " predicted velocity:\n";
+      for(uint64_t j = 0; j < this->mesh.get_n_points_y(); j++){
+        for(uint64_t i = 0; i < this->mesh.get_n_points_x(); i++){
+          std::cout << "  " << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
         }
       }
     }
@@ -112,21 +114,21 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     double time_post_RHS = timer2.seconds();
     time_assemble_RHS += time_post_RHS - time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout<< " RHS:\n";
-      for(int k = 0; k < this->RHS.extent(0); k++){
-        std::cout<< "  " << k << " : " << this->RHS(k) << std::endl;
+      std::cout << " RHS:\n";
+      for(uint64_t k = 0; k < this->RHS.extent(0); k++){
+        std::cout << "  " << k << " : " << this->RHS(k) << std::endl;
       }
     }
 
     // solve PPE
-    this->poisson_solve_pressure(1e-6, l_s);
+    this->poisson_solve_pressure(1e-2, l_s);
     double time_post_poisson_solve = timer2.seconds();
     time_poisson_solve += time_post_poisson_solve - time_post_RHS;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout<< " pressure:\n";
-      for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
-        for(int i = 0; i < this->mesh.get_n_cells_x(); i++){
-          std::cout<< "  " << i << " " << j << " : " << this->mesh.get_pressure(i, j) << std::endl;
+      std::cout << " pressure:\n";
+      for(uint64_t j = 0; j < this->mesh.get_n_cells_y(); j++){
+        for(uint64_t i = 0; i < this->mesh.get_n_cells_x(); i++){
+          std::cout << "  " << i << " " << j << " : " << this->mesh.get_pressure(i, j) << std::endl;
         }
       }
     }
@@ -136,10 +138,10 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     double time_post_correct = timer2.seconds();
     time_corrector_step += time_post_correct - time_post_poisson_solve;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout<< " corrected velocity:\n";
-      for(int j = 0; j < this->mesh.get_n_points_y(); j++){
-        for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-          std::cout<< "  " << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
+      std::cout << " corrected velocity:\n";
+      for(uint64_t j = 0; j < this->mesh.get_n_points_y(); j++){
+        for(uint64_t i = 0; i < this->mesh.get_n_points_x(); i++){
+          std::cout << "  " << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
         }
       }
     }
@@ -149,27 +151,27 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
       double max_m_C = this->compute_global_courant_number();
       double adjusted_delta_t = this->delta_t;
       if(this->verbosity > 1){
-        std::cout<< "    Computed global CFL = " << max_m_C << "; target max = " << this->max_C << std::endl;
+        std::cout << "    Computed global CFL = " << max_m_C << "; target max = " << this->max_C << std::endl;
       }
       if(max_m_C > this->max_C){
         // decrease time step due to excessive CFL
         adjusted_delta_t = this->delta_t / (max_m_C * 100);
         if(this->verbosity > 1){
-          std::cout<< "  - Decreased time step from " << this->delta_t << " to " << adjusted_delta_t << std::endl;
+          std::cout << "  - Decreased time step from " << this->delta_t << " to " << adjusted_delta_t << std::endl;
         }
         this->delta_t = adjusted_delta_t;
       }else if(max_m_C < 0.06 * this->max_C){
         // increase time step if possible to accelerate computation
         adjusted_delta_t = this->delta_t * 1.06;
         if(this->verbosity > 1){
-          std::cout<< "  + Increased time step from " << this->delta_t << " to " << adjusted_delta_t << std::endl;
+          std::cout << "  + Increased time step from " << this->delta_t << " to " << adjusted_delta_t << std::endl;
         }
         this->delta_t = adjusted_delta_t;
       }
     }
 
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout<< "Stopping after first iteration.\n";
+      std::cout << "Stopping after first iteration.\n";
       return;
     }
   }
@@ -224,9 +226,9 @@ double Solver::assemble_Laplacian(){
 
   // iterate m*n over cells to construct mn*mn Laplacian
   uint64_t idx = 0;
-  for(int j = 0; j < n; j++){
-    for(int i = 0; i < m; i++){
-      int k = this->mesh.cartesian_to_index(i, j, m, n);
+  for(uint64_t j = 0; j < n; j++){
+    for(uint64_t i = 0; i < m; i++){
+      uint64_t k = this->mesh.cartesian_to_index(i, j, m, n);
       bool first_in_row = true;
       // assign below diagonal entries when relevant
       if(j > 0)
@@ -369,32 +371,34 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   uint64_t mn = n_x * n_y;
   Kokkos::View<double*> x("x", mn);
 
+  // initialize scalar factor of Laplacian
+  const double one = Kokkos::ArithTraits<double>::one();
+  double factor = one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
   Kokkos::deep_copy (residual, this->RHS);
-  double factor = 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
-  KokkosSparse::spmv("N", - factor, this->Laplacian, x, 1, residual);
-  double rms2 = KokkosBlas::dot(residual, residual);
-
-  // compute square norm of RHS for relative error
-  double RHS2 = KokkosBlas::dot(this->RHS, this->RHS);
+  KokkosSparse::spmv("N", - factor, this->Laplacian, x, one, residual);
+  double rms2 = KokkosBlas::nrm2_squared(residual);
 
   // terminate early when possible
+  double RHS2 = KokkosBlas::nrm2_squared(this->RHS);
   if(rms2 / RHS2 < r_tol){
     return x;
   }
 
   // initialize first direction of the conjugate basis with residual
-  Kokkos::View<double*> direction("direction", n_x * n_y);
+  Kokkos::View<double*> direction("direction", mn);
   Kokkos::deep_copy (direction, residual);
 
   // storage for Laplacian dot direction intermediate vector
-  Kokkos::View<double*> intermediate("intermediate", n_x * n_y);
+  Kokkos::View<double*> intermediate("intermediate", mn);
 
   // iterate for at most the dimension of the matrix
-  for(int k = 0; k < mn; k++){
+  const double zero = Kokkos::ArithTraits<double>::zero();
+  for(uint64_t k = 0; k < mn; k++){
     // compute step length
-    KokkosSparse::spmv("N", factor, this->Laplacian, direction, 0, intermediate);
+    KokkosSparse::spmv("N", factor, this->Laplacian, direction, zero, intermediate);
     double alpha = rms2 / KokkosBlas::dot(direction, intermediate);
 
     // update solution
@@ -402,7 +406,7 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
 
     // update residual
     KokkosBlas::axpy(-alpha, intermediate, residual);
-    double new_rms2 = KokkosBlas::dot(residual, residual);
+    double new_rms2 = KokkosBlas::nrm2_squared(residual);
 
     // terminate early when possible
     if(new_rms2 / RHS2 < r_tol){
@@ -410,12 +414,12 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
     }
 
     // compute new direction
-    KokkosBlas::axpby(1, residual, - new_rms2 / rms2, direction);
+    KokkosBlas::axpby(one, residual, - new_rms2 / rms2, direction);
 
     // update residual squared L2
     rms2 = new_rms2;
     if(this->verbosity > 1){
-      std::cout<< "  relative error squared: " <<rms2 / RHS2<< std::endl;
+      std::cout << "  relative error squared: " <<rms2 / RHS2<< std::endl;
     }
   }
 
@@ -423,20 +427,31 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   return x;
 }
 
-Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol){
+Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n_sweeps){
   // initialize approximate solution with null guess
   uint64_t n_x = this->mesh.get_n_cells_x();
   uint64_t n_y = this->mesh.get_n_cells_y();
   uint64_t mn = n_x * n_y;
   Kokkos::View<double*> x("x", mn);
   
+  // initialize scalar factor of Laplacian
+  const double one = Kokkos::ArithTraits<double>::one();
+  double factor = one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
+  Kokkos::deep_copy (residual, this->RHS);
+  KokkosSparse::spmv("N", - factor, this->Laplacian, x, one, residual);
+  double rms2 = KokkosBlas::nrm2_squared(residual);
 
-  // compute square norm of RHS for relative error
-  double RHS2 = KokkosBlas::nrm2(this->RHS);
+  // terminate early when possible
+  double RHS2 = KokkosBlas::nrm2_squared(this->RHS);
+  if(rms2 / RHS2 < r_tol){
+    return x;
+  }
 
   // create handle to Kokkos Gauss-Seidel kernel
+  Kokkos::View<double*> scaled_values("scaled values", this->Laplacian.nnz());
   KokkosKernels::Experimental::
     KokkosKernelsHandle<uint64_t, uint64_t, double, exec_space, mem_space, mem_space> handle;
   handle.create_gs_handle(KokkosSparse::GS_DEFAULT);
@@ -445,36 +460,36 @@ Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol){
 			  this->Laplacian.graph.row_map,
 			  this->Laplacian.graph.entries,
 			  true);
+  KokkosBlas::scal(scaled_values, factor, this->Laplacian.values);
   KokkosSparse::Experimental::
     gauss_seidel_numeric(&handle, mn, mn,
 			 this->Laplacian.graph.row_map,
 			 this->Laplacian.graph.entries,
-			 this->Laplacian.values,
+			 scaled_values,
 			 true);
 
   // iteratively solve
   bool first_iter = true;
-  double rel_res = 1.;
-  int iteration = 0;
-  std::cout << iteration << std::endl;
-  while(first_iter || rel_res > r_tol){
-    // call forward solver
+  while(max_it-- > 0 && rms2 / RHS2 > r_tol){
+    // perform pairs of forward then backward sweeps
     KokkosSparse::Experimental::
-      forward_sweep_gauss_seidel_apply(&handle, mn, mn,
+      symmetric_gauss_seidel_apply(&handle, mn, mn,
 				       this->Laplacian.graph.row_map,
 				       this->Laplacian.graph.entries,
-				       this->Laplacian.values,
+				       scaled_values,
 				       x,
 				       this->RHS,
 				       first_iter, first_iter,
-				       1., 1);
+				       one, n_sweeps);
     first_iter = false;
 
-    // recompute relative residual
+    // terminate early when possible
     Kokkos::deep_copy(residual, this->RHS);
-    KokkosSparse::spmv("N", 1., this->Laplacian, x, -1., residual);
-    rel_res = KokkosBlas::nrm2(residual) / RHS2;
-    std::cout << iteration ++ << std::endl;
+    KokkosSparse::spmv("N", - factor, this->Laplacian, x, one, residual);
+    rms2 = KokkosBlas::nrm2_squared(residual);
+    if(rms2 / RHS2 < r_tol){
+      return x;
+    }
   }
 
   // destroy handle to Kokkos kernel
@@ -489,10 +504,9 @@ void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
   if(l_s == linear_solver::CONJUGATE_GRADIENT){
     this->mesh.set_pressure(this->conjugate_gradient_solve(r_tol));
   } else if(l_s == linear_solver::GAUSS_SEIDEL){
-    return;
-    this->mesh.set_pressure(this->gauss_seidel_solve(r_tol));
+    this->mesh.set_pressure(this->gauss_seidel_solve(r_tol, 5, 10));
   } else{
-    std::cout<< "  Pressure Poisson equation ignored." << std::endl;
+    std::cout << "  Pressure Poisson equation ignored." << std::endl;
   }
 }
 
