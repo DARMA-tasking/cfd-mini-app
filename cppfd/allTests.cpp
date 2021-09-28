@@ -26,15 +26,15 @@ struct solver_test : testing::Test{
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {
-                                                    {"u_top", 1.0},
-                                                    {"v_top", 0.0},
-                                                    {"u_bot", 0.0},
-                                                    {"v_bot", 0.0},
-                                                    {"u_left", 0.0},
-                                                    {"v_left", 0.0},
-                                                    {"u_right", 0.0},
-                                                    {"v_right", 0.0}
-                                                  };
+						    {"u_top", 1.0},
+						    {"v_top", 0.0},
+						    {"u_bot", 0.0},
+						    {"v_bot", 0.0},
+						    {"u_left", 0.0},
+						    {"v_left", 0.0},
+						    {"u_right", 0.0},
+						    {"v_right", 0.0}
+						  };
     BoundaryConditions b_c(mesh, velocity_values);
 
     solver = new Solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
@@ -64,25 +64,25 @@ TEST_F(solver_test, Laplacian_values_test){
       dense_Laplacian[i++][j] = 0.;
   }
 
-  
+
   // check if all values in Laplacian matrix are correct
   for(int j = 0; j < mn; j++){
     for(int i = 0; i < mn; i++){
       if(j == i){
-        // check diagonal coefficient
-        if(i < 2){
-          EXPECT_EQ(dense_Laplacian[2 * i][2 * i], -2);
-          EXPECT_EQ(dense_Laplacian[mn - 1 - 2 * i][mn - 1 - 2 * i], -2);
-        }
-        if(i < 4){
-          EXPECT_EQ(dense_Laplacian[2 * i + 1][2 * i + 1], -3);
-        }
+	// check diagonal coefficient
+	if(i < 2){
+	  EXPECT_EQ(dense_Laplacian[2 * i][2 * i], -2);
+	  EXPECT_EQ(dense_Laplacian[mn - 1 - 2 * i][mn - 1 - 2 * i], -2);
+	}
+	if(i < 4){
+	  EXPECT_EQ(dense_Laplacian[2 * i + 1][2 * i + 1], -3);
+	}
       } else if((j == i + 3 && i < 6) || (j == i - 3 && i > 2) || (j == i - 1 && i > 0 && i != 3 && i != 6) || (j == i + 1 && i < mn - 1 && i != 2 && i != 5)){
-        // check non zero off-diagonal coefficients
-        EXPECT_EQ(dense_Laplacian[i][j], 1);
+	// check non zero off-diagonal coefficients
+	EXPECT_EQ(dense_Laplacian[i][j], 1);
       } else {
-        // check zero off-diagonal coefficients
-        EXPECT_EQ(dense_Laplacian[i][j], 0);
+	// check zero off-diagonal coefficients
+	EXPECT_EQ(dense_Laplacian[i][j], 0);
       }
     }
   }
