@@ -43,37 +43,41 @@ struct solver_test : testing::Test{
 
 TEST_F(solver_test, Laplacian_values_test){
   // run solve routine until Laplacian matrix is generated
-  solver->solve(Solver::stopping_point::AFTER_LAPLACIAN, Solver::linear_solver::CONJUGATE_GRADIENT, Solver::adaptative_time_step::ON);
+  solver->solve(Solver::stopping_point::AFTER_LAPLACIAN, Solver::linear_solver::NONE, Solver::adaptative_time_step::OFF);
 
-  // check if all values in Laplacian matrix are correct
+  // remap CRS Laplacian into dense matrix for convenience
+  int mn = 9;
   auto sparse_Laplacian = solver->get_Laplacian();
-  double dense_Laplacian[9][9];
-  for(int j = 0; j < 9; j++){
+  double dense_Laplacian[mn][mn];
+  auto n_cols = sparse_Laplacian.numCols();
+  for(int j = 0; j < mn; j++){
     auto row = sparse_Laplacian.row(j);
     int i = 0;
     for(int k = 0; k < row.length; k++){
       auto val = row.value(k);
       auto col = row.colidx(k);
-	while (i++ < col)
-	  dense_Laplacian[i][j] = 0.;
-	dense_Laplacian[i][j] = val;
-      while (i++ < sparse_Laplacian.numCols())
-	dense_Laplacian[i][j] = 0.;
+      while (i < col)
+	dense_Laplacian[i++][j] = 0.;
+      dense_Laplacian[i++][j] = val;
     }
+    while (i < n_cols)
+      dense_Laplacian[i++][j] = 0.;
   }
 
-  for(int j = 0; j < 9; j++){
-    for(int i = 0; j < 9; j++){
+  
+  // check if all values in Laplacian matrix are correct
+  for(int j = 0; j < mn; j++){
+    for(int i = 0; i < mn; i++){
       if(j == i){
         // check diagonal coefficient
-        if(i == 0 || i == 1){
+        if(i < 2){
           EXPECT_EQ(dense_Laplacian[2 * i][2 * i], -2);
-          EXPECT_EQ(dense_Laplacian[8 - 2 * i][8 - 2 * i], -2);
+          EXPECT_EQ(dense_Laplacian[mn - 1 - 2 * i][mn - 1 - 2 * i], -2);
         }
         if(i < 4){
           EXPECT_EQ(dense_Laplacian[2 * i + 1][2 * i + 1], -3);
         }
-      } else if((j == i + 3 && i < 6) || (j == i - 3 && i > 2) || (j == i - 1 && i > 0 && i != 3 && i != 6) || (j == i + 1 && i < 8 && i !=2 && i !=5)){
+      } else if((j == i + 3 && i < 6) || (j == i - 3 && i > 2) || (j == i - 1 && i > 0 && i != 3 && i != 6) || (j == i + 1 && i < mn - 1 && i != 2 && i != 5)){
         // check non zero off-diagonal coefficients
         EXPECT_EQ(dense_Laplacian[i][j], 1);
       } else {
