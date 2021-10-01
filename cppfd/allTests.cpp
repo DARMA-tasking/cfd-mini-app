@@ -26,15 +26,15 @@ struct solver_test : testing::Test{
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {
-						    {"u_top", 1.0},
-						    {"v_top", 0.0},
-						    {"u_bot", 0.0},
-						    {"v_bot", 0.0},
-						    {"u_left", 0.0},
-						    {"v_left", 0.0},
-						    {"u_right", 0.0},
-						    {"v_right", 0.0}
-						  };
+      {"u_top", 1.0},
+      {"v_top", 0.0},
+      {"u_bot", 0.0},
+      {"v_bot", 0.0},
+      {"u_left", 0.0},
+      {"v_left", 0.0},
+      {"u_right", 0.0},
+      {"v_right", 0.0}
+    };
     BoundaryConditions b_c(mesh, velocity_values);
 
     solver = new Solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
