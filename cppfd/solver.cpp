@@ -50,7 +50,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   double time2 = timer.seconds();
   if(this->verbosity > 0){
     std::cout << "Laplacian density: " << std::setprecision (4)
-	     << 100. * lap_d << " %\n";
+	      << 100. * lap_d << " %\n";
     std::cout << "Laplacian computation duration: " << time2 - time1 << std::endl;
   }
   if(s_p == stopping_point::AFTER_LAPLACIAN){
@@ -232,65 +232,65 @@ double Solver::assemble_Laplacian(){
       bool first_in_row = true;
       // assign below diagonal entries when relevant
       if(j > 0)
-      {
-	if (first_in_row)
 	{
-	  row_ptrs[k] = idx;
-	  first_in_row =  false;
+	  if (first_in_row)
+	    {
+	      row_ptrs[k] = idx;
+	      first_in_row =  false;
+	    }
+	  col_ids[idx] = k - m;
+	  values[idx++] = 1;
 	}
-	col_ids[idx] = k - m;
-	values[idx++] = 1;
-      }
       if(i > 0)
-      {
-	if (first_in_row)
 	{
-	  row_ptrs[k] = idx;
-	  first_in_row =  false;
+	  if (first_in_row)
+	    {
+	      row_ptrs[k] = idx;
+	      first_in_row =  false;
+	    }
+	  col_ids[idx] = k - 1;
+	  values[idx++] = 1;
 	}
-	col_ids[idx] = k - 1;
-	values[idx++] = 1;
-      }
 
       // assign diagonal entry
       int v = -4;
       if(i == 0 || i == m - 1)
-      {
-	++v;
-      }
+	{
+	  ++v;
+	}
       if(j == 0 || j == n - 1)
-      {
-	++v;
-      }
+	{
+	  ++v;
+	}
       if (first_in_row)
-      {
-	row_ptrs[k] = idx;
-	first_in_row =  false;
-      }
+	{
+	  row_ptrs[k] = idx;
+	  first_in_row =  false;
+	}
       col_ids[idx] = k;
       values[idx++] = v;
 
       // assign above diagonal entries when relevant
       if(i < m - 1)
-      {
-	if (first_in_row)
 	{
-	  row_ptrs[k] = idx;
-	  first_in_row =  false;
+	  if (first_in_row)
+	    {
+	      row_ptrs[k] = idx;
+	      first_in_row =  false;
+	    }
+	  col_ids[idx] = k + 1;
+	  values[idx++] = 1;
 	}
-	col_ids[idx] = k + 1;
-	values[idx++] = 1;
-      }
       if(j < n - 1)
-      {
-	if (first_in_row)
 	{
-	  row_ptrs[k] = idx;
-	  first_in_row =  false;
+	  if (first_in_row)
+	    {
+	      row_ptrs[k] = idx;
+	      first_in_row =  false;
+	    }
+	  col_ids[idx] = k + m;
+	  values[idx++] = 1;
 	}
-	col_ids[idx] = k + m;
-	values[idx++] = 1;
-      }
     }
   }
 
@@ -474,13 +474,13 @@ Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n
     // perform pairs of forward then backward sweeps
     KokkosSparse::Experimental::
       symmetric_gauss_seidel_apply(&handle, mn, mn,
-				       this->Laplacian.graph.row_map,
-				       this->Laplacian.graph.entries,
-				       scaled_values,
-				       x,
-				       this->RHS,
-				       first_iter, first_iter,
-				       one, n_sweeps);
+				   this->Laplacian.graph.row_map,
+				   this->Laplacian.graph.entries,
+				   scaled_values,
+				   x,
+				   this->RHS,
+				   first_iter, first_iter,
+				   one, n_sweeps);
     first_iter = false;
 
     // terminate early when possible
