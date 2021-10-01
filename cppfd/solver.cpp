@@ -5,7 +5,6 @@
 #include <KokkosBlas1_axpby.hpp>
 #include <KokkosBlas1_nrm2_squared.hpp>
 #include <KokkosBlas1_dot.hpp>
-
 #include <KokkosSparse_CrsMatrix.hpp>
 #include <KokkosSparse_spmv.hpp>
 #include <KokkosSparse_gauss_seidel.hpp>
@@ -35,7 +34,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   // compute Reynolds number from input parameters
   double velocity_bc_max = this->boundary_conditions.get_velocity_bc_max_norm();
   double l = this->mesh.get_cell_size() * std::max(this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
-  this->Re = velocity_bc_max * l / this->nu;
+  this->Re = velocity_bc_max * this->one / this->nu;
   if(this->verbosity > 0){
     std::cout << "Reynolds number : " << this->Re << std::endl;
   }
@@ -213,6 +212,30 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   timer.reset();
 }
 
+void Solver::assign_CRS_entry(uint64_t &idx,
+			      bool &first_in_row,
+			      const uint64_t k,
+			      const uint64_t offset,
+			      const double value,
+			      Kokkos::View<uint64_t*> row_ptrs,
+			      Kokkos::View<uint64_t*> col_ids,
+			      Kokkos::View<double*> values){
+
+  // treat first entry in row differently
+  if (first_in_row)
+    {
+      // new row starts at current index
+      row_ptrs[k] = idx;
+      first_in_row =  false;
+    }
+
+  // assign off-diagonal column index
+  col_ids[idx] = k + offset;
+
+  // assign unit value
+  values[idx++] = value;
+}
+
 // computation of Laplacian matrix
 double Solver::assemble_Laplacian(){
   // initialize containers for sparse storage of Laplacian
@@ -224,7 +247,7 @@ double Solver::assemble_Laplacian(){
   Kokkos::View<uint64_t*> col_ids("column indices", nnz);
   Kokkos::View<double*> values("values", nnz);
 
-  // iterate m*n over cells to construct mn*mn Laplacian
+  // iterate over m*n cells to construct mn*mn Laplacian
   uint64_t idx = 0;
   for(uint64_t j = 0; j < n; j++){
     for(uint64_t i = 0; i < m; i++){
@@ -232,28 +255,18 @@ double Solver::assemble_Laplacian(){
       bool first_in_row = true;
       // assign below diagonal entries when relevant
       if(j > 0)
-	{
-	  if (first_in_row)
-	    {
-	      row_ptrs[k] = idx;
-	      first_in_row =  false;
-	    }
-	  col_ids[idx] = k - m;
-	  values[idx++] = 1;
-	}
+	this->assign_CRS_entry(idx,
+			       first_in_row,
+			       k, -m, this->one,
+			       row_ptrs, col_ids, values);
       if(i > 0)
-	{
-	  if (first_in_row)
-	    {
-	      row_ptrs[k] = idx;
-	      first_in_row =  false;
-	    }
-	  col_ids[idx] = k - 1;
-	  values[idx++] = 1;
-	}
+	this->assign_CRS_entry(idx,
+			       first_in_row,
+			       k, -1, this->one,
+			       row_ptrs, col_ids, values);
 
       // assign diagonal entry
-      int v = -4;
+      double v = -4 * this->one;
       if(i == 0 || i == m - 1)
 	{
 	  ++v;
@@ -262,35 +275,22 @@ double Solver::assemble_Laplacian(){
 	{
 	  ++v;
 	}
-      if (first_in_row)
-	{
-	  row_ptrs[k] = idx;
-	  first_in_row =  false;
-	}
-      col_ids[idx] = k;
-      values[idx++] = v;
+      this->assign_CRS_entry(idx,
+			     first_in_row,
+			     k, 0, v,
+			     row_ptrs, col_ids, values);
 
       // assign above diagonal entries when relevant
       if(i < m - 1)
-	{
-	  if (first_in_row)
-	    {
-	      row_ptrs[k] = idx;
-	      first_in_row =  false;
-	    }
-	  col_ids[idx] = k + 1;
-	  values[idx++] = 1;
-	}
+	this->assign_CRS_entry(idx,
+			       first_in_row,
+			       k, 1, this->one,
+			       row_ptrs, col_ids, values);
       if(j < n - 1)
-	{
-	  if (first_in_row)
-	    {
-	      row_ptrs[k] = idx;
-	      first_in_row =  false;
-	    }
-	  col_ids[idx] = k + m;
-	  values[idx++] = 1;
-	}
+	this->assign_CRS_entry(idx,
+			       first_in_row,
+			       k, m, this->one,
+			       row_ptrs, col_ids, values);
     }
   }
 
@@ -372,13 +372,12 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   Kokkos::View<double*> x("x", mn);
 
   // initialize scalar factor of Laplacian
-  const double one = Kokkos::ArithTraits<double>::one();
-  double factor = one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+  double factor = this->one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
 
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
   Kokkos::deep_copy (residual, this->RHS);
-  KokkosSparse::spmv("N", - factor, this->Laplacian, x, one, residual);
+  KokkosSparse::spmv("N", - factor, this->Laplacian, x, this->one, residual);
   double rms2 = KokkosBlas::nrm2_squared(residual);
 
   // terminate early when possible
@@ -395,10 +394,9 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   Kokkos::View<double*> intermediate("intermediate", mn);
 
   // iterate for at most the dimension of the matrix
-  const double zero = Kokkos::ArithTraits<double>::zero();
   for(uint64_t k = 0; k < mn; k++){
     // compute step length
-    KokkosSparse::spmv("N", factor, this->Laplacian, direction, zero, intermediate);
+    KokkosSparse::spmv("N", factor, this->Laplacian, direction, this->zero, intermediate);
     double alpha = rms2 / KokkosBlas::dot(direction, intermediate);
 
     // update solution
@@ -414,7 +412,7 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
     }
 
     // compute new direction
-    KokkosBlas::axpby(one, residual, - new_rms2 / rms2, direction);
+    KokkosBlas::axpby(this->one, residual, - new_rms2 / rms2, direction);
 
     // update residual squared L2
     rms2 = new_rms2;
@@ -435,13 +433,12 @@ Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n
   Kokkos::View<double*> x("x", mn);
 
   // initialize scalar factor of Laplacian
-  const double one = Kokkos::ArithTraits<double>::one();
-  double factor = one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+  double factor = this->one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
 
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
   Kokkos::deep_copy (residual, this->RHS);
-  KokkosSparse::spmv("N", - factor, this->Laplacian, x, one, residual);
+  KokkosSparse::spmv("N", - factor, this->Laplacian, x, this->one, residual);
   double rms2 = KokkosBlas::nrm2_squared(residual);
 
   // terminate early when possible
@@ -480,12 +477,12 @@ Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n
 				   x,
 				   this->RHS,
 				   first_iter, first_iter,
-				   one, n_sweeps);
+				   this->one, n_sweeps);
     first_iter = false;
 
     // terminate early when possible
     Kokkos::deep_copy(residual, this->RHS);
-    KokkosSparse::spmv("N", - factor, this->Laplacian, x, one, residual);
+    KokkosSparse::spmv("N", - factor, this->Laplacian, x, this->one, residual);
     rms2 = KokkosBlas::nrm2_squared(residual);
     if(rms2 / RHS2 < r_tol){
       return x;

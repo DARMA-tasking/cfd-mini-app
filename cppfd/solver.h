@@ -7,6 +7,7 @@
 #include <map>
 
 #include <Kokkos_Core.hpp>
+#include <Kokkos_ArithTraits.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
 
 #include "mesh.h"
@@ -64,6 +65,16 @@ class Solver
     // assemble Laplacian matrix for Poisson solver and return density
     double assemble_Laplacian();
 
+    // convenience method to add entry into CRS matrix
+    void assign_CRS_entry(uint64_t &idx,
+			  bool &first_in_row,
+			  const uint64_t k,
+			  const uint64_t offset,
+			  const double value,
+			  Kokkos::View<uint64_t*> row_ptrs,
+			  Kokkos::View<uint64_t*> col_ids,
+			  Kokkos::View<double*> values);
+
     // compute predicted velocities without pressure term
     void predict_velocity();
 
@@ -90,6 +101,10 @@ class Solver
 
     // reference to mesh onto which solve is performed
     Mesh& mesh;
+
+    // store Kokkos kernels zero and unit values
+    double zero = Kokkos::ArithTraits<double>::zero();
+    double one = Kokkos::ArithTraits<double>::one();
 
     // default physics variable values
     double nu = 0.0008;
