@@ -6,9 +6,9 @@
 #include <KokkosBlas1_nrm2_squared.hpp>
 #include <KokkosBlas1_dot.hpp>
 
-#include "KokkosSparse_CrsMatrix.hpp"
-#include "KokkosSparse_spmv.hpp"
-#include "KokkosSparse_gauss_seidel.hpp"
+#include <KokkosSparse_CrsMatrix.hpp>
+#include <KokkosSparse_spmv.hpp>
+#include <KokkosSparse_gauss_seidel.hpp>
 
 // main function to solve N-S equation on time steps
 void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step ats){
