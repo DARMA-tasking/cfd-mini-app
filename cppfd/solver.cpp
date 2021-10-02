@@ -240,7 +240,9 @@ void Solver::assign_CRS_entry(uint64_t &idx,
 double Solver::assemble_Laplacian(){
   // initialize containers for sparse storage of Laplacian
   const uint64_t m = this->mesh.get_n_cells_x();
+  const uint64_t mm1 = m - 1;
   const uint64_t n = this->mesh.get_n_cells_y();
+  const uint64_t nm1 = n - 1;
   const uint64_t mn = m * n;
   const uint64_t nnz = 5 * mn - 2 * (m + n);
   Kokkos::View<uint64_t*> row_ptrs("row pointers", mn + 1);
@@ -267,11 +269,11 @@ double Solver::assemble_Laplacian(){
 
       // assign diagonal entry
       double v = -4 * this->one;
-      if(i == 0 || i == m - 1)
+      if(i == 0 || i == mm1)
 	{
 	  ++v;
 	}
-      if(j == 0 || j == n - 1)
+      if(j == 0 || j == nm1)
 	{
 	  ++v;
 	}
@@ -281,12 +283,12 @@ double Solver::assemble_Laplacian(){
 			     row_ptrs, col_ids, values);
 
       // assign above diagonal entries when relevant
-      if(i < m - 1)
+      if(i < mm1)
 	this->assign_CRS_entry(idx,
 			       first_in_row,
 			       k, 1, this->one,
 			       row_ptrs, col_ids, values);
-      if(j < n - 1)
+      if(j < nm1)
 	this->assign_CRS_entry(idx,
 			       first_in_row,
 			       k, m, this->one,
@@ -307,42 +309,57 @@ double Solver::assemble_Laplacian(){
 
 // implementation of the predictor step
 void Solver::predict_velocity(){
-  Kokkos::View<double*[2]> predicted_velocity("velocity", this->mesh.get_n_points_x() * this->mesh.get_n_points_y());
+  Kokkos::View<double*[2]> v_star("predicted velocity", this->mesh.get_n_points_x() * this->mesh.get_n_points_y());
+  const uint64_t m = this->mesh.get_n_points_x() - 1;
+  const uint64_t mm1 = m - 1;
+  const uint64_t n = this->mesh.get_n_points_y() - 1;
+  const uint64_t nm1 = n - 1;
 
   // compute common factors
-  const double inv_size_sq = 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
-  const double inv_size_db = 1 / (2 * this->mesh.get_cell_size());
+  const double inv_sz2 = 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
 
   // predict velocity components using finite difference discretization
-  for(uint64_t j = 1; j < this->mesh.get_n_points_y() - 1; j++){
-    for(uint64_t i = 1; i < this->mesh.get_n_points_x() - 1; i++){
-      // factors needed to predict new u component
-      double v = 0.25 * (this->mesh.get_velocity_y(i-1, j) + this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i, j+1));
-      double dudx2 = (this->mesh.get_velocity_x(i-1, j) - 2 * this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i+1, j)) * inv_size_sq;
-      double dudy2 = (this->mesh.get_velocity_x(i, j-1) - 2 * this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i, j+1)) * inv_size_sq;
-      double dudx = this->mesh.get_velocity_x(i, j) * (this->mesh.get_velocity_x(i+1, j) - this->mesh.get_velocity_x(i-1, j)) * inv_size_db;
-      double dudy = v * (this->mesh.get_velocity_x(i, j+1) - this->mesh.get_velocity_x(i, j-1)) * inv_size_db;
+  for(uint64_t j = 1; j < nm1; j++){
+    for(uint64_t i = 1; i < mm1; i++){
+      // retrieve velocity at stencil nodes only ocne
+      double v_x_ij = this->mesh.get_velocity_x(i, j);
+      double v_x_ij_l = this->mesh.get_velocity_x(i - 1, j);
+      double v_x_ij_r = this->mesh.get_velocity_x(i + 1, j);
+      double v_x_ij_t = this->mesh.get_velocity_x(i, j + 1);
+      double v_x_ij_b = this->mesh.get_velocity_x(i, j - 1);
+      double v_y_ij = this->mesh.get_velocity_y(i, j);
+      double v_y_ij_l = this->mesh.get_velocity_y(i - 1, j);
+      double v_y_ij_r = this->mesh.get_velocity_y(i + 1, j);
+      double v_y_ij_t = this->mesh.get_velocity_y(i, j + 1);
+      double v_y_ij_b = this->mesh.get_velocity_y(i, j - 1);
 
-      // factors needed to predict new v component
-      double u = 0.25 * (this->mesh.get_velocity_x(i, j-1) + this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i, j+1));
-      double dvdx2 = (this->mesh.get_velocity_y(i-1, j) - 2 * this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i+1, j)) * inv_size_sq;
-      double dvdy2 = (this->mesh.get_velocity_y(i, j-1) - 2 * this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i, j+1)) * inv_size_sq;
-      double dvdy = this->mesh.get_velocity_y(i, j) * (this->mesh.get_velocity_y(i+1, j) - this->mesh.get_velocity_y(i-1, j)) * inv_size_db;
-      double dvdx = u * (this->mesh.get_velocity_y(i, j+1) - this->mesh.get_velocity_y(i, j-1)) * inv_size_db;
+      // factors needed to predict new x component
+      double v_y = .25 * (v_y_ij_l + v_y_ij + v_y_ij_t);
+      double dudx = inv_sz2 * v_x_ij * (v_x_ij_r - v_x_ij_l);
+      double dudy = inv_sz2 * v_y * (v_x_ij_t - v_x_ij_b);
+      double dudx2 = inv_sz2 * (v_x_ij_l - 2 * v_x_ij + v_x_ij_r);
+      double dudy2 = inv_sz2 * (v_x_ij_b - 2 * v_x_ij + v_x_ij_t);
+
+      // factors needed to predict new y component
+      double v_x = .25 * (v_x_ij_b + v_x_ij + v_x_ij_t);
+      double dvdy = inv_sz2 * v_y_ij * (v_y_ij_r - v_y_ij_l);
+      double dvdx = inv_sz2 * v_x * (v_y_ij_t - v_y_ij_b);
+      double dvdx2 = inv_sz2 * (v_y_ij_l - 2 * v_y_ij + v_y_ij_r);
+      double dvdy2 = inv_sz2 * (v_y_ij_b - 2 * v_y_ij + v_y_ij_t);
 
       // assign predicted u and v components to predicted_velocity storage
-      uint64_t k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
-      predicted_velocity(k, 0) = this->mesh.get_velocity_x(i, j) + this->delta_t * (this->nu * (dudx2 + dudy2) - (this->mesh.get_velocity_x(i, j) * dudx + v * dudy));
-      predicted_velocity(k, 1) = this->mesh.get_velocity_y(i, j) + this->delta_t * (this->nu * (dvdx2 + dvdy2) - (this->mesh.get_velocity_y(i, j) * dvdx + u * dvdy));
+      uint64_t k = this->mesh.cartesian_to_index(i, j, m, n);
+      v_star(k, 0) = v_x_ij + this->delta_t * (this->nu * (dudx2 + dudy2) - (v_x_ij * dudx + v_y * dudy));
+      v_star(k, 1) = v_y_ij + this->delta_t * (this->nu * (dvdx2 + dvdy2) - (v_y_ij * dvdx + v_x * dvdy));
     }
   }
 
   // assign interior predicted velocity vectors to mesh
-  for(int j = 1; j < this->mesh.get_n_points_y() - 1; j++){
-    for(int i = 1; i < this->mesh.get_n_points_x() - 1; i++){
-      int k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_points_x(), this->mesh.get_n_points_y());
-      this->mesh.set_velocity_x(i, j, predicted_velocity(k, 0));
-      this->mesh.set_velocity_y(i, j, predicted_velocity(k, 1));
+  for(int j = 1; j < nm1; j++){
+    for(int i = 1; i < mm1; i++){
+      int k = this->mesh.cartesian_to_index(i, j, m, n);
+      this->mesh.set_velocity_x(i, j, v_star(k, 0));
+      this->mesh.set_velocity_y(i, j, v_star(k, 1));
     }
   }
 }
@@ -350,16 +367,15 @@ void Solver::predict_velocity(){
 // implementation of the poisson RHS assembly
 void Solver::assemble_poisson_RHS(){
   this->RHS = Kokkos::View<double*>("RHS", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
-  double factor = this->rho / this->delta_t;
+  double factor = this->rho / this->delta_t / (2 * this->mesh.get_cell_size());
   for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
     for(int i = 0; i < this->mesh.get_n_cells_x(); i++){
       double u_r = this->mesh.get_velocity_x(i+1, j) + this->mesh.get_velocity_x(i+1, j+1);
       double u_l = this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i, j+1);
       double v_t = this->mesh.get_velocity_y(i, j+1) + this->mesh.get_velocity_y(i+1, j+1);
       double v_b = this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i+1, j);
-      double inv_h = 1 / (2 * this->mesh.get_cell_size());
       uint64_t k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
-      this->RHS(k) = factor * ((u_r - u_l + v_t - v_b) * inv_h);
+      this->RHS(k) = factor * (u_r - u_l + v_t - v_b);
     }
   }
 }
