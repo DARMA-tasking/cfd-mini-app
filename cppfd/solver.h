@@ -7,6 +7,8 @@
 #include <map>
 
 #include <Kokkos_Core.hpp>
+#include <Kokkos_ArithTraits.hpp>
+#include <KokkosSparse_CrsMatrix.hpp>
 
 #include "mesh.h"
 #include "boundaryconditions.h"
@@ -27,9 +29,6 @@ class Solver
       this->nu = d_v / r;
     }
 
-    // getter for the laplacian for unit testing
-    Kokkos::View<double**> get_laplacian() {return this->laplacian;}
-
     // provide stopping points for debugging purposes
     enum struct stopping_point: uint8_t{
       NONE,
@@ -41,7 +40,8 @@ class Solver
     // allow for different linear solvers for the pressure
     enum struct linear_solver: uint8_t{
       NONE,
-      CONJUGATE_GRADIENT
+      CONJUGATE_GRADIENT,
+      GAUSS_SEIDEL
     };
 
     // allow for adaptative time stepping to be enabled/disabled
@@ -50,12 +50,30 @@ class Solver
       OFF
     };
 
+    // getter for the Laplacian for unit testing
+    using exec_space = typename Kokkos::DefaultExecutionSpace;
+    using mem_space = typename exec_space::memory_space;
+    using device_type = typename Kokkos::
+      Device<Kokkos::DefaultExecutionSpace, mem_space>;
+  using matrix_type = typename KokkosSparse::CrsMatrix<double, uint64_t, device_type, void, uint64_t>;
+    matrix_type get_Laplacian() {return this->Laplacian;}
+
     // main solver routine
-    void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::CONJUGATE_GRADIENT, adaptative_time_step ats = adaptative_time_step::OFF);
+    void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::GAUSS_SEIDEL, adaptative_time_step ats = adaptative_time_step::OFF);
 
   private:
-    // assemble Laplacian matrix for Poisson solver
-    void assemble_laplacian();
+    // assemble Laplacian matrix for Poisson solver and return density
+    double assemble_Laplacian();
+
+    // convenience method to add entry into CRS matrix
+    void assign_CRS_entry(uint64_t &idx,
+			  bool &first_in_row,
+			  const uint64_t k,
+			  const uint64_t offset,
+			  const double value,
+			  Kokkos::View<uint64_t*> row_ptrs,
+			  Kokkos::View<uint64_t*> col_ids,
+			  Kokkos::View<double*> values);
 
     // compute predicted velocities without pressure term
     void predict_velocity();
@@ -63,11 +81,14 @@ class Solver
     // build poisson equation right hand side vector
     void assemble_poisson_RHS();
 
-    // conjugate gradient based solver
-    Kokkos::View<double*> conjugate_gradient_solve(double r_tol);
-
     // solve poisson pressure equation using conjugate gradient method
     void poisson_solve_pressure(double r_tol, linear_solver l_s);
+
+    // conjugate gradient solver
+    Kokkos::View<double*> conjugate_gradient_solve(double r_tol);
+
+    // Gauss-Seidel solver
+    Kokkos::View<double*> gauss_seidel_solve(double r_tol, int max_it, int n_sweeps);
 
     // apply corrector step
     void correct_velocity();
@@ -81,21 +102,23 @@ class Solver
     // reference to mesh onto which solve is performed
     Mesh& mesh;
 
-    // physics and simulation control related variables
+    // store Kokkos kernels zero and unit values
+    double zero = Kokkos::ArithTraits<double>::zero();
+    double one = Kokkos::ArithTraits<double>::one();
+
+    // default physics variable values
     double nu = 0.0008;
     double rho = 1.225;
     double delta_t = 0.001;
     double t_final = 0.001;
     double max_C = 0.5;
     double Re = 100;
-    int verbosity = 1;
-    double time_predictor_step = 0;
-    double time_assemble_RHS = 0;
-    double time_poisson_solve = 0;
-    double time_corrector_step = 0;
 
-    // laplacian matrix and its inverse
-    Kokkos::View<double**> laplacian = {};
+    // default verbosity level
+    int verbosity = 1;
+
+    // Laplacian matrix and its inverse
+    matrix_type Laplacian = {};
 
     // poisson equation right hand side vector
     Kokkos::View<double*> RHS = {};
