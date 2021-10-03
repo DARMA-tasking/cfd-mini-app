@@ -316,12 +316,14 @@ void Solver::predict_velocity(){
   const uint64_t nm1 = n - 1;
 
   // compute common factors
-  const double inv_sz2 = 1 / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+  const double h = this->mesh.get_cell_size();
+  const double inv_2sz = 1. / (2. * h);
+  const double inv_sz2 = 1. / (h * h);
 
   // predict velocity components using finite difference discretization
   for(uint64_t j = 1; j < nm1; j++){
     for(uint64_t i = 1; i < mm1; i++){
-      // retrieve velocity at stencil nodes only ocne
+      // retrieve velocity at stencil nodes only once
       double v_x_ij = this->mesh.get_velocity_x(i, j);
       double v_x_ij_l = this->mesh.get_velocity_x(i - 1, j);
       double v_x_ij_r = this->mesh.get_velocity_x(i + 1, j);
@@ -335,15 +337,15 @@ void Solver::predict_velocity(){
 
       // factors needed to predict new x component
       double v_y = .25 * (v_y_ij_l + v_y_ij + v_y_ij_t);
-      double dudx = inv_sz2 * v_x_ij * (v_x_ij_r - v_x_ij_l);
-      double dudy = inv_sz2 * v_y * (v_x_ij_t - v_x_ij_b);
+      double dudx = inv_2sz * v_x_ij * (v_x_ij_r - v_x_ij_l);
+      double dudy = inv_2sz * v_y * (v_x_ij_t - v_x_ij_b);
       double dudx2 = inv_sz2 * (v_x_ij_l - 2 * v_x_ij + v_x_ij_r);
       double dudy2 = inv_sz2 * (v_x_ij_b - 2 * v_x_ij + v_x_ij_t);
 
       // factors needed to predict new y component
       double v_x = .25 * (v_x_ij_b + v_x_ij + v_x_ij_t);
-      double dvdy = inv_sz2 * v_y_ij * (v_y_ij_r - v_y_ij_l);
-      double dvdx = inv_sz2 * v_x * (v_y_ij_t - v_y_ij_b);
+      double dvdy = inv_2sz * v_y_ij * (v_y_ij_r - v_y_ij_l);
+      double dvdx = inv_2sz * v_x * (v_y_ij_t - v_y_ij_b);
       double dvdx2 = inv_sz2 * (v_y_ij_l - 2 * v_y_ij + v_y_ij_r);
       double dvdy2 = inv_sz2 * (v_y_ij_b - 2 * v_y_ij + v_y_ij_t);
 
