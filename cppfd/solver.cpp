@@ -310,9 +310,9 @@ double Solver::assemble_Laplacian(){
 // implementation of the predictor step
 void Solver::predict_velocity(){
   Kokkos::View<double*[2]> v_star("predicted velocity", this->mesh.get_n_points_x() * this->mesh.get_n_points_y());
-  const uint64_t m = this->mesh.get_n_points_x() - 1;
+  const uint64_t m = this->mesh.get_n_points_x();
   const uint64_t mm1 = m - 1;
-  const uint64_t n = this->mesh.get_n_points_y() - 1;
+  const uint64_t n = this->mesh.get_n_points_y();
   const uint64_t nm1 = n - 1;
 
   // compute common factors
