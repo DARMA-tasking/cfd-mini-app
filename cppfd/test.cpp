@@ -13,9 +13,9 @@ int main(int argc, char** argv) {
 
   // define input parameters
   double density = 1.225;
-  double dynamic_viscosity = 0.3;
-  double delta_t = 0.001;
-  double t_final = 0.1;
+  double dynamic_viscosity = 0.01;
+  double delta_t = 0.005;
+  double t_final = 0.5;
   double max_C = 0.5;
   uint64_t n_cells = 30;
   std::cout << "Input parameters:"
@@ -51,6 +51,7 @@ int main(int argc, char** argv) {
 
   // save results
   mesh.write_vtk("test.vti");
+  mesh.write_txt("lid_driven_cavity.txt", "velocity");
 
   // terminate cleanly
   return 0;

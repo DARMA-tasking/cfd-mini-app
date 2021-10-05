@@ -133,3 +133,38 @@ void Mesh::write_vtk(std::string file_name){
   std::cout<<std::endl;
   std::cout<<"Visualization file created: \""<<file_name<<"\""<<std::endl;
 }
+
+void Mesh::write_txt(std::string file_name, std::string output_type){
+  uint64_t nx = this->n_cells_x;
+  uint64_t ny = this->n_cells_y;
+
+  ofstream file;
+  file.open(file_name);
+
+  if(!file){
+    std::cout<<"Error in creating text file"<<std::endl;
+  }
+
+  if(output_type == "velocity"){
+    for(int j = ny; j > - 1; j--){
+      for(int i = 0; i < nx + 1; i++){
+        file<<this->get_velocity_x(i, j)<<" "<<this->get_velocity_y(i, j)<<"\n";
+      }
+    }
+  }
+  else if(output_type == "pressure"){
+    for(int j = ny; j > - 1; j--){
+      for(int i = 0; i < nx + 1; i++){
+        file<<this->get_pressure(i, j)<<"\n";
+      }
+    }
+  }
+  else{
+    std::cout << "Unrecognized output type" << '\n';
+  }
+
+  //closing the file
+  file.close();
+  std::cout<<std::endl;
+  std::cout<<"Data file created: \""<<file_name<<"\""<<std::endl;
+}

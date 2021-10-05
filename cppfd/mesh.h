@@ -58,6 +58,9 @@ class Mesh
     // VTK visualization file writer
     void write_vtk(std::string file_name);
 
+    // output txt file of velocity values
+    void write_txt(std::string file_name, std::string output_type);
+
   private:
     // physical origin f the mesh
     std::array<double,2> origin;
