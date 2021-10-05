@@ -2,7 +2,6 @@ import sys
 import os
 import matplotlib.pyplot as plt
 import numpy as np
-from skimage import io
 
 def openFoam_results_reader(path_to_file):
     velocity_values = []
@@ -60,13 +59,6 @@ def main():
     N_cppfd = int(round(np.sqrt(len(cppfd_velocity_values))))
     t = np.array([cppfd_velocity_values[i][0] for i in range(len(cppfd_velocity_values))])
     cppfd_velocity_matrix = t.reshape((N_cppfd, N_cppfd))
-
-    # visualize results
-    # io.imshow(openFoam_velocity_matrix)
-    # plt.show()
-
-    io.imshow(cppfd_velocity_matrix)
-    plt.show()
 
     # plot velocities along center line
     y_openFoam = [openFoam_velocity_matrix[i][N_oF // 2] for i in range(N_oF - 1, -1, -1)]
