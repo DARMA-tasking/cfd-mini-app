@@ -23,9 +23,9 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
   }
   this->boundary_conditions.apply_velocity_bc();
   if(s_p == stopping_point::AFTER_BOUNDARY_CONDITION){
-    for(int j = 0; j < this->mesh.get_n_points_y(); j++){
-      for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-	std::cout << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
+    for(int j = 0; j < this->mesh_chunk.get_n_points_y(); j++){
+      for(int i = 0; i < this->mesh_chunk.get_n_points_x(); i++){
+	std::cout << i << " " << j << " : " << this->mesh_chunk.get_velocity_x(i, j) << " , " << this->mesh_chunk.get_velocity_y(i, j) << std::endl;
       }
     }
     return;
@@ -33,7 +33,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
 
   // compute Reynolds number from input parameters
   double velocity_bc_max = this->boundary_conditions.get_velocity_bc_max_norm();
-  double l = this->mesh.get_cell_size() * std::max(this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
+  double l = this->mesh_chunk.get_cell_size() * std::max(this->mesh_chunk.get_n_cells_x(), this->mesh_chunk.get_n_cells_y());
   this->Re = velocity_bc_max * this->one / this->nu;
   if(this->verbosity > 0){
     std::cout << "Reynolds number : " << this->Re << std::endl;
@@ -101,9 +101,9 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     time_predictor_step += time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout << " predicted velocity:\n";
-      for(uint64_t j = 0; j < this->mesh.get_n_points_y(); j++){
-	for(uint64_t i = 0; i < this->mesh.get_n_points_x(); i++){
-	  std::cout << "  " << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
+      for(uint64_t j = 0; j < this->mesh_chunk.get_n_points_y(); j++){
+	for(uint64_t i = 0; i < this->mesh_chunk.get_n_points_x(); i++){
+	  std::cout << "  " << i << " " << j << " : " << this->mesh_chunk.get_velocity_x(i, j) << " , " << this->mesh_chunk.get_velocity_y(i, j) << std::endl;
 	}
       }
     }
@@ -125,9 +125,9 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     time_poisson_solve += time_post_poisson_solve - time_post_RHS;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout << " pressure:\n";
-      for(uint64_t j = 0; j < this->mesh.get_n_cells_y(); j++){
-	for(uint64_t i = 0; i < this->mesh.get_n_cells_x(); i++){
-	  std::cout << "  " << i << " " << j << " : " << this->mesh.get_pressure(i, j) << std::endl;
+      for(uint64_t j = 0; j < this->mesh_chunk.get_n_cells_y(); j++){
+	for(uint64_t i = 0; i < this->mesh_chunk.get_n_cells_x(); i++){
+	  std::cout << "  " << i << " " << j << " : " << this->mesh_chunk.get_pressure(i, j) << std::endl;
 	}
       }
     }
@@ -138,9 +138,9 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     time_corrector_step += time_post_correct - time_post_poisson_solve;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout << " corrected velocity:\n";
-      for(uint64_t j = 0; j < this->mesh.get_n_points_y(); j++){
-	for(uint64_t i = 0; i < this->mesh.get_n_points_x(); i++){
-	  std::cout << "  " << i << " " << j << " : " << this->mesh.get_velocity_x(i, j) << " , " << this->mesh.get_velocity_y(i, j) << std::endl;
+      for(uint64_t j = 0; j < this->mesh_chunk.get_n_points_y(); j++){
+	for(uint64_t i = 0; i < this->mesh_chunk.get_n_points_x(); i++){
+	  std::cout << "  " << i << " " << j << " : " << this->mesh_chunk.get_velocity_x(i, j) << " , " << this->mesh_chunk.get_velocity_y(i, j) << std::endl;
 	}
       }
     }
@@ -239,9 +239,9 @@ void Solver::assign_CRS_entry(uint64_t &idx,
 // computation of Laplacian matrix
 double Solver::assemble_Laplacian(){
   // initialize containers for sparse storage of Laplacian
-  const uint64_t m = this->mesh.get_n_cells_x();
+  const uint64_t m = this->mesh_chunk.get_n_cells_x();
   const uint64_t mm1 = m - 1;
-  const uint64_t n = this->mesh.get_n_cells_y();
+  const uint64_t n = this->mesh_chunk.get_n_cells_y();
   const uint64_t nm1 = n - 1;
   const uint64_t mn = m * n;
   const uint64_t nnz = 5 * mn - 2 * (m + n);
@@ -253,7 +253,7 @@ double Solver::assemble_Laplacian(){
   uint64_t idx = 0;
   for(uint64_t j = 0; j < n; j++){
     for(uint64_t i = 0; i < m; i++){
-      uint64_t k = this->mesh.cartesian_to_index(i, j, m, n);
+      uint64_t k = this->mesh_chunk.cartesian_to_index(i, j, m, n);
       bool first_in_row = true;
       // assign below diagonal entries when relevant
       if(j > 0)
@@ -309,14 +309,14 @@ double Solver::assemble_Laplacian(){
 
 // implementation of the predictor step
 void Solver::predict_velocity(){
-  Kokkos::View<double*[2]> v_star("predicted velocity", this->mesh.get_n_points_x() * this->mesh.get_n_points_y());
-  const uint64_t m = this->mesh.get_n_points_x();
+  Kokkos::View<double*[2]> v_star("predicted velocity", this->mesh_chunk.get_n_points_x() * this->mesh_chunk.get_n_points_y());
+  const uint64_t m = this->mesh_chunk.get_n_points_x();
   const uint64_t mm1 = m - 1;
-  const uint64_t n = this->mesh.get_n_points_y();
+  const uint64_t n = this->mesh_chunk.get_n_points_y();
   const uint64_t nm1 = n - 1;
 
   // compute common factors
-  const double h = this->mesh.get_cell_size();
+  const double h = this->mesh_chunk.get_cell_size();
   const double inv_2sz = 1. / (2. * h);
   const double inv_sz2 = 1. / (h * h);
 
@@ -324,16 +324,16 @@ void Solver::predict_velocity(){
   for(uint64_t j = 1; j < nm1; j++){
     for(uint64_t i = 1; i < mm1; i++){
       // retrieve velocity at stencil nodes only once
-      double v_x_ij = this->mesh.get_velocity_x(i, j);
-      double v_x_ij_l = this->mesh.get_velocity_x(i - 1, j);
-      double v_x_ij_r = this->mesh.get_velocity_x(i + 1, j);
-      double v_x_ij_t = this->mesh.get_velocity_x(i, j + 1);
-      double v_x_ij_b = this->mesh.get_velocity_x(i, j - 1);
-      double v_y_ij = this->mesh.get_velocity_y(i, j);
-      double v_y_ij_l = this->mesh.get_velocity_y(i - 1, j);
-      double v_y_ij_r = this->mesh.get_velocity_y(i + 1, j);
-      double v_y_ij_t = this->mesh.get_velocity_y(i, j + 1);
-      double v_y_ij_b = this->mesh.get_velocity_y(i, j - 1);
+      double v_x_ij = this->mesh_chunk.get_velocity_x(i, j);
+      double v_x_ij_l = this->mesh_chunk.get_velocity_x(i - 1, j);
+      double v_x_ij_r = this->mesh_chunk.get_velocity_x(i + 1, j);
+      double v_x_ij_t = this->mesh_chunk.get_velocity_x(i, j + 1);
+      double v_x_ij_b = this->mesh_chunk.get_velocity_x(i, j - 1);
+      double v_y_ij = this->mesh_chunk.get_velocity_y(i, j);
+      double v_y_ij_l = this->mesh_chunk.get_velocity_y(i - 1, j);
+      double v_y_ij_r = this->mesh_chunk.get_velocity_y(i + 1, j);
+      double v_y_ij_t = this->mesh_chunk.get_velocity_y(i, j + 1);
+      double v_y_ij_b = this->mesh_chunk.get_velocity_y(i, j - 1);
 
       // factors needed to predict new x component
       double v_y = .25 * (v_y_ij_l + v_y_ij + v_y_ij_t);
@@ -350,7 +350,7 @@ void Solver::predict_velocity(){
       double dvdy2 = inv_sz2 * (v_y_ij_b - 2 * v_y_ij + v_y_ij_t);
 
       // assign predicted u and v components to predicted_velocity storage
-      uint64_t k = this->mesh.cartesian_to_index(i, j, m, n);
+      uint64_t k = this->mesh_chunk.cartesian_to_index(i, j, m, n);
       v_star(k, 0) = v_x_ij + this->delta_t * (this->nu * (dudx2 + dudy2) - (v_x_ij * dudx + v_y * dudy));
       v_star(k, 1) = v_y_ij + this->delta_t * (this->nu * (dvdx2 + dvdy2) - (v_y_ij * dvdx + v_x * dvdy));
     }
@@ -359,24 +359,24 @@ void Solver::predict_velocity(){
   // assign interior predicted velocity vectors to mesh
   for(int j = 1; j < nm1; j++){
     for(int i = 1; i < mm1; i++){
-      int k = this->mesh.cartesian_to_index(i, j, m, n);
-      this->mesh.set_velocity_x(i, j, v_star(k, 0));
-      this->mesh.set_velocity_y(i, j, v_star(k, 1));
+      int k = this->mesh_chunk.cartesian_to_index(i, j, m, n);
+      this->mesh_chunk.set_velocity_x(i, j, v_star(k, 0));
+      this->mesh_chunk.set_velocity_y(i, j, v_star(k, 1));
     }
   }
 }
 
 // implementation of the poisson RHS assembly
 void Solver::assemble_poisson_RHS(){
-  this->RHS = Kokkos::View<double*>("RHS", this->mesh.get_n_cells_x() * this->mesh.get_n_cells_y());
-  double factor = this->rho / this->delta_t / (2 * this->mesh.get_cell_size());
-  for(int j = 0; j < this->mesh.get_n_cells_y(); j++){
-    for(int i = 0; i < this->mesh.get_n_cells_x(); i++){
-      double u_r = this->mesh.get_velocity_x(i+1, j) + this->mesh.get_velocity_x(i+1, j+1);
-      double u_l = this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_x(i, j+1);
-      double v_t = this->mesh.get_velocity_y(i, j+1) + this->mesh.get_velocity_y(i+1, j+1);
-      double v_b = this->mesh.get_velocity_y(i, j) + this->mesh.get_velocity_y(i+1, j);
-      uint64_t k = this->mesh.cartesian_to_index(i, j, this->mesh.get_n_cells_x(), this->mesh.get_n_cells_y());
+  this->RHS = Kokkos::View<double*>("RHS", this->mesh_chunk.get_n_cells_x() * this->mesh_chunk.get_n_cells_y());
+  double factor = this->rho / this->delta_t / (2 * this->mesh_chunk.get_cell_size());
+  for(int j = 0; j < this->mesh_chunk.get_n_cells_y(); j++){
+    for(int i = 0; i < this->mesh_chunk.get_n_cells_x(); i++){
+      double u_r = this->mesh_chunk.get_velocity_x(i+1, j) + this->mesh_chunk.get_velocity_x(i+1, j+1);
+      double u_l = this->mesh_chunk.get_velocity_x(i, j) + this->mesh_chunk.get_velocity_x(i, j+1);
+      double v_t = this->mesh_chunk.get_velocity_y(i, j+1) + this->mesh_chunk.get_velocity_y(i+1, j+1);
+      double v_b = this->mesh_chunk.get_velocity_y(i, j) + this->mesh_chunk.get_velocity_y(i+1, j);
+      uint64_t k = this->mesh_chunk.cartesian_to_index(i, j, this->mesh_chunk.get_n_cells_x(), this->mesh_chunk.get_n_cells_y());
       this->RHS(k) = factor * (u_r - u_l + v_t - v_b);
     }
   }
@@ -384,13 +384,13 @@ void Solver::assemble_poisson_RHS(){
 
 Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   // initialize approximate solution with null guess
-  uint64_t n_x = this->mesh.get_n_cells_x();
-  uint64_t n_y = this->mesh.get_n_cells_y();
+  uint64_t n_x = this->mesh_chunk.get_n_cells_x();
+  uint64_t n_y = this->mesh_chunk.get_n_cells_y();
   uint64_t mn = n_x * n_y;
   Kokkos::View<double*> x("x", mn);
 
   // initialize scalar factor of Laplacian
-  double factor = this->one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+  double factor = this->one / (this->mesh_chunk.get_cell_size() * this->mesh_chunk.get_cell_size());
 
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
@@ -445,13 +445,13 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
 
 Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n_sweeps){
   // initialize approximate solution with null guess
-  uint64_t n_x = this->mesh.get_n_cells_x();
-  uint64_t n_y = this->mesh.get_n_cells_y();
+  uint64_t n_x = this->mesh_chunk.get_n_cells_x();
+  uint64_t n_y = this->mesh_chunk.get_n_cells_y();
   uint64_t mn = n_x * n_y;
   Kokkos::View<double*> x("x", mn);
 
   // initialize scalar factor of Laplacian
-  double factor = this->one / (this->mesh.get_cell_size() * this->mesh.get_cell_size());
+  double factor = this->one / (this->mesh_chunk.get_cell_size() * this->mesh_chunk.get_cell_size());
 
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
@@ -517,9 +517,9 @@ Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n
 // implementation of the Poisson equation solver
 void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
   if(l_s == linear_solver::CONJUGATE_GRADIENT){
-    this->mesh.set_pressure(this->conjugate_gradient_solve(r_tol));
+    this->mesh_chunk.set_pressure(this->conjugate_gradient_solve(r_tol));
   } else if(l_s == linear_solver::GAUSS_SEIDEL){
-    this->mesh.set_pressure(this->gauss_seidel_solve(r_tol, 5, 10));
+    this->mesh_chunk.set_pressure(this->gauss_seidel_solve(r_tol, 5, 10));
   } else{
     std::cout << "  Pressure Poisson equation ignored." << std::endl;
   }
@@ -527,28 +527,28 @@ void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
 
 // implementation of the corrector step
 void Solver::correct_velocity(){
-  double factor = .5 / this->mesh.get_cell_size();
+  double factor = .5 / this->mesh_chunk.get_cell_size();
   double t_to_r = this->delta_t / this->rho;
-  for(uint64_t j = 1; j < this->mesh.get_n_points_y() - 1; j++){
-    for(uint64_t i = 1; i < this->mesh.get_n_points_x() - 1; i++){
-      double p_ur = this->mesh.get_pressure(i, j);
-      double p_ul = this->mesh.get_pressure(i-1, j);
-      double p_ll = this->mesh.get_pressure(i-1, j-1);
-      double p_lr = this->mesh.get_pressure(i, j-1);
-      this->mesh.set_velocity_x(i, j, (this->mesh.get_velocity_x(i, j) - t_to_r * (p_ur - p_ul + p_lr - p_ll) * factor));
-      this->mesh.set_velocity_y(i, j, (this->mesh.get_velocity_y(i, j) - t_to_r * (p_ur - p_lr + p_ul - p_ll) * factor));
+  for(uint64_t j = 1; j < this->mesh_chunk.get_n_points_y() - 1; j++){
+    for(uint64_t i = 1; i < this->mesh_chunk.get_n_points_x() - 1; i++){
+      double p_ur = this->mesh_chunk.get_pressure(i, j);
+      double p_ul = this->mesh_chunk.get_pressure(i-1, j);
+      double p_ll = this->mesh_chunk.get_pressure(i-1, j-1);
+      double p_lr = this->mesh_chunk.get_pressure(i, j-1);
+      this->mesh_chunk.set_velocity_x(i, j, (this->mesh_chunk.get_velocity_x(i, j) - t_to_r * (p_ur - p_ul + p_lr - p_ll) * factor));
+      this->mesh_chunk.set_velocity_y(i, j, (this->mesh_chunk.get_velocity_y(i, j) - t_to_r * (p_ur - p_lr + p_ul - p_ll) * factor));
     }
   }
 }
 
 double Solver::compute_cell_courant_number(int i, int j){
-  return (this->mesh.get_velocity_x(i, j) + this->mesh.get_velocity_y(i, j)) * this->delta_t / this->mesh.get_cell_size();
+  return (this->mesh_chunk.get_velocity_x(i, j) + this->mesh_chunk.get_velocity_y(i, j)) * this->delta_t / this->mesh_chunk.get_cell_size();
 }
 
 double Solver::compute_global_courant_number(){
   double max_C = std::numeric_limits<int>::min();
-  for(int j = 1; j <= this->mesh.get_n_cells_y(); j++){
-    for(int i = 1; i <= this->mesh.get_n_cells_x(); i++){
+  for(int j = 1; j <= this->mesh_chunk.get_n_cells_y(); j++){
+    for(int i = 1; i <= this->mesh_chunk.get_n_cells_x(); i++){
       double c = this->compute_cell_courant_number(i, j);
       if(c > max_C){
 	max_C = c;

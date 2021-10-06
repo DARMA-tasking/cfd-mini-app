@@ -1,4 +1,4 @@
-#include "mesh.h"
+#include "meshchunk.h"
 
 #include <iostream>
 #include <array>
@@ -16,12 +16,12 @@
 // BASIC
 ////////////////////////////////////////////////////////////////
 
-void Mesh::set_origin(double x, double y){
+void MeshChunk::set_origin(double x, double y){
   this->origin[0] = x;
   this->origin[1] = y;
 }
 
-std::array<int,2> Mesh::index_to_cartesian(int k, int n, int nmax){
+std::array<int,2> MeshChunk::index_to_cartesian(int k, int n, int nmax){
   if (k < 0 || k >= nmax){
   // Return invalid values when index is out of bounds
     return  {-1, -1};
@@ -31,7 +31,7 @@ std::array<int,2> Mesh::index_to_cartesian(int k, int n, int nmax){
   }
 }
 
-int Mesh::cartesian_to_index(int i, int j, int ni, int nj){
+int MeshChunk::cartesian_to_index(int i, int j, int ni, int nj){
   if(i<0 || i>=ni || j<0 || j>=nj){
     // Return invalid value when coordinates are out of bounds
     return -1;
@@ -44,14 +44,14 @@ int Mesh::cartesian_to_index(int i, int j, int ni, int nj){
 // CELLS (PRESSURE)
 ////////////////////////////////////////////////////////////////
 
-void Mesh::set_pressure(int i, int j, double scalar){
+void MeshChunk::set_pressure(int i, int j, double scalar){
   int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
   if(k != -1){
     this->pressure(k) = scalar;
   }
 }
 
-double Mesh::get_pressure(int i, int j){
+double MeshChunk::get_pressure(int i, int j){
   int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
   if(k == -1){
     return std::nan("");
@@ -64,19 +64,19 @@ double Mesh::get_pressure(int i, int j){
 // POINTS (VELOCITY)
 ////////////////////////////////////////////////////////////////
 
-void Mesh::set_velocity_x(int i, int j, double u){
+void MeshChunk::set_velocity_x(int i, int j, double u){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     this->velocity(i, j, 0) = u;
   }
 }
 
-void Mesh::set_velocity_y(int i, int j, double v){
+void MeshChunk::set_velocity_y(int i, int j, double v){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     this->velocity(i, j, 1) = v;
   }
 }
 
-double Mesh::get_velocity_x(int i, int j){
+double MeshChunk::get_velocity_x(int i, int j){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     return this->velocity(i, j, 0);
   } else{
@@ -84,7 +84,7 @@ double Mesh::get_velocity_x(int i, int j){
   }
 }
 
-double Mesh::get_velocity_y(int i, int j){
+double MeshChunk::get_velocity_y(int i, int j){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     return this->velocity(i, j, 1);
   } else{
@@ -92,7 +92,7 @@ double Mesh::get_velocity_y(int i, int j){
   }
 }
 
-void Mesh::write_vtk(std::string file_name){
+void MeshChunk::write_vtk(std::string file_name){
   vtkNew<vtkUniformGrid> ug;
   uint64_t nx = this->n_cells_x;
   uint64_t ny = this->n_cells_y;

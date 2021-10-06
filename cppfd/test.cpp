@@ -3,7 +3,7 @@
 #include <map>
 #include <Kokkos_Core.hpp>
 
-#include "mesh.cpp"
+#include "meshchunk.cpp"
 #include "boundaryconditions.cpp"
 #include "solver.cpp"
 
@@ -29,7 +29,7 @@ int main(int argc, char** argv) {
 	    << n_cells * n_cells << "\n\n";
 
   // create mesh
-  Mesh mesh(n_cells, n_cells, 1. / n_cells);
+  MeshChunk mesh(n_cells, n_cells, 1. / n_cells);
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {

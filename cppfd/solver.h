@@ -10,14 +10,14 @@
 #include <Kokkos_ArithTraits.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
 
-#include "mesh.h"
+#include "meshchunk.h"
 #include "boundaryconditions.h"
 
 class Solver
 {
   public:
-    Solver(Mesh& m, BoundaryConditions& b_c, double d_t, double t_f, double r, double d_v, double m_C, int v)
-      : mesh(m)
+    Solver(MeshChunk& m, BoundaryConditions& b_c, double d_t, double t_f, double r, double d_v, double m_C, int v)
+      : mesh_chunk(m)
       , boundary_conditions(b_c)
       , delta_t(d_t)
       , t_final(t_f)
@@ -100,7 +100,7 @@ class Solver
     double compute_global_courant_number();
 
     // reference to mesh onto which solve is performed
-    Mesh& mesh;
+    MeshChunk& mesh_chunk;
 
     // store Kokkos kernels zero and unit values
     double zero = Kokkos::ArithTraits<double>::zero();

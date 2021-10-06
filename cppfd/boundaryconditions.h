@@ -4,13 +4,13 @@
 #include <cmath>
 #include <map>
 
-#include"mesh.h"
+#include"meshchunk.h"
 
 class BoundaryConditions
 {
   public:
-    BoundaryConditions(Mesh& m, std::map<std::string, double> velocity_values)
-      : mesh(m)
+    BoundaryConditions(MeshChunk& m, std::map<std::string, double> velocity_values)
+      : mesh_chunk(m)
       , u_top(velocity_values["u_top"])
       , v_top(velocity_values["v_top"])
       , u_bot(velocity_values["u_bot"])
@@ -29,7 +29,7 @@ class BoundaryConditions
 
   private:
     // reference to mesh onto which boundary conditions apply
-    Mesh& mesh;
+    MeshChunk& mesh_chunk;
 
     // boundary condition velocity values
     double u_top = 0;

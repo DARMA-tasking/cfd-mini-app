@@ -13,10 +13,10 @@ enum struct NodeEnum : int8_t {
   BOUNDARY = 4
 };
 
-class Mesh
+class MeshChunk
 {
   public:
-    Mesh(int n_x, int n_y, double cell_size)
+    MeshChunk(int n_x, int n_y, double cell_size)
       : n_cells_x(n_x)
       , n_cells_y(n_y)
       , origin{0, 0}

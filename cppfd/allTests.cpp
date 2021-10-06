@@ -4,7 +4,7 @@
 #include <Kokkos_Core.hpp>
 #include <gtest/gtest.h>
 
-#include "mesh.cpp"
+#include "meshchunk.cpp"
 #include "boundaryconditions.cpp"
 #include "solver.cpp"
 
@@ -22,7 +22,7 @@ struct solver_test : testing::Test{
     uint64_t n_cells = 3;
 
     // create mesh
-    Mesh mesh(n_cells, n_cells, 1. / n_cells);
+    MeshChunk mesh(n_cells, n_cells, 1. / n_cells);
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {

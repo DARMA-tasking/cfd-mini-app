@@ -1,17 +1,17 @@
 #include "boundaryconditions.h"
 
 void BoundaryConditions::apply_velocity_bc(){
-  for(int i = 0; i < this->mesh.get_n_points_x(); i++){
-    this->mesh.set_velocity_x(i, this->mesh.get_n_cells_y(), this->u_top);
-    this->mesh.set_velocity_y(i, this->mesh.get_n_cells_y(), this->v_top);
-    this->mesh.set_velocity_x(i, 0, this->u_bot);
-    this->mesh.set_velocity_y(i, 0, this->v_bot);
+  for(int i = 0; i < this->mesh_chunk.get_n_points_x(); i++){
+    this->mesh_chunk.set_velocity_x(i, this->mesh_chunk.get_n_cells_y(), this->u_top);
+    this->mesh_chunk.set_velocity_y(i, this->mesh_chunk.get_n_cells_y(), this->v_top);
+    this->mesh_chunk.set_velocity_x(i, 0, this->u_bot);
+    this->mesh_chunk.set_velocity_y(i, 0, this->v_bot);
   }
-  for(int j = 0; j < this->mesh.get_n_points_y(); j++){
-    this->mesh.set_velocity_x(0, j, this->u_left);
-    this->mesh.set_velocity_y(0, j, this->v_left);
-    this->mesh.set_velocity_x(this->mesh.get_n_cells_x(), j, this->u_right);
-    this->mesh.set_velocity_y(this->mesh.get_n_cells_x(), j, this->v_right);
+  for(int j = 0; j < this->mesh_chunk.get_n_points_y(); j++){
+    this->mesh_chunk.set_velocity_x(0, j, this->u_left);
+    this->mesh_chunk.set_velocity_y(0, j, this->v_left);
+    this->mesh_chunk.set_velocity_x(this->mesh_chunk.get_n_cells_x(), j, this->u_right);
+    this->mesh_chunk.set_velocity_y(this->mesh_chunk.get_n_cells_x(), j, this->v_right);
   }
 }
 
