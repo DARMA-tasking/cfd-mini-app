@@ -41,28 +41,22 @@ int MeshChunk::cartesian_to_index(int i, int j, int ni, int nj){
 }
 
 ////////////////////////////////////////////////////////////////
-// CELLS (PRESSURE)
-////////////////////////////////////////////////////////////////
-
-void MeshChunk::set_pressure(int i, int j, double scalar){
-  int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
-  if(k != -1){
-    this->pressure(k) = scalar;
-  }
-}
-
-double MeshChunk::get_pressure(int i, int j){
-  int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
-  if(k == -1){
-    return std::nan("");
-  } else{
-    return this->pressure(k);
-  }
-}
-
-////////////////////////////////////////////////////////////////
 // POINTS (VELOCITY)
 ////////////////////////////////////////////////////////////////
+
+void MeshChunk::set_point_type(int i, int j, PointTypeEnum t){
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+    this->point_type(i, j) = t;
+  }
+}
+
+PointTypeEnum MeshChunk::get_point_type(int i, int j){
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+    return this->point_type(i, j);
+  } else{
+    return PointTypeEnum::INVALID;
+  }
+}
 
 void MeshChunk::set_velocity_x(int i, int j, double u){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
@@ -91,6 +85,30 @@ double MeshChunk::get_velocity_y(int i, int j){
     return std::nan("");
   }
 }
+
+////////////////////////////////////////////////////////////////
+// CELLS (PRESSURE)
+////////////////////////////////////////////////////////////////
+
+void MeshChunk::set_pressure(int i, int j, double scalar){
+  int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
+  if(k != -1){
+    this->pressure(k) = scalar;
+  }
+}
+
+double MeshChunk::get_pressure(int i, int j){
+  int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
+  if(k == -1){
+    return std::nan("");
+  } else{
+    return this->pressure(k);
+  }
+}
+
+////////////////////////////////////////////////////////////////
+// UTILITIES
+////////////////////////////////////////////////////////////////
 
 void MeshChunk::write_vtk(std::string file_name){
   vtkNew<vtkUniformGrid> ug;

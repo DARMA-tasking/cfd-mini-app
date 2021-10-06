@@ -11,14 +11,14 @@ class BoundaryConditions
   public:
     BoundaryConditions(MeshChunk& m, std::map<std::string, double> velocity_values)
       : mesh_chunk(m)
-      , u_top(velocity_values["u_top"])
-      , v_top(velocity_values["v_top"])
-      , u_bot(velocity_values["u_bot"])
-      , v_bot(velocity_values["v_bot"])
-      , u_left(velocity_values["u_left"])
-      , v_left(velocity_values["v_left"])
-      , u_right(velocity_values["u_right"])
-      , v_right(velocity_values["v_right"])
+      , v_x_t(velocity_values["v_x_t"])
+      , v_y_t(velocity_values["v_y_t"])
+      , v_x_b(velocity_values["v_x_b"])
+      , v_y_b(velocity_values["v_y_b"])
+      , v_x_l(velocity_values["v_x_l"])
+      , v_y_l(velocity_values["v_y_l"])
+      , v_x_r(velocity_values["v_x_r"])
+      , v_y_r(velocity_values["v_y_r"])
       {}
 
     // set values at boundaries of fluid domain
@@ -32,12 +32,12 @@ class BoundaryConditions
     MeshChunk& mesh_chunk;
 
     // boundary condition velocity values
-    double u_top = 0;
-    double v_top = 0;
-    double u_bot = 0;
-    double v_bot = 0;
-    double u_left = 0;
-    double v_left = 0;
-    double u_right = 0;
-    double v_right = 0;
+    double v_x_t = 0;
+    double v_y_t = 0;
+    double v_x_b = 0;
+    double v_y_b = 0;
+    double v_x_l = 0;
+    double v_y_l = 0;
+    double v_x_r = 0;
+    double v_y_r = 0;
 };

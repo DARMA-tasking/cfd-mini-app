@@ -33,14 +33,14 @@ int main(int argc, char** argv) {
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {
-    {"u_top", 1.0},
-    {"v_top", 0.0},
-    {"u_bot", 0.0},
-    {"v_bot", 0.0},
-    {"u_left", 0.0},
-    {"v_left", 0.0},
-    {"u_right", 0.0},
-    {"v_right", 0.0}
+    {"v_x_t", 1.0},
+    {"v_y_t", 0.0},
+    {"v_x_b", 0.0},
+    {"v_y_b", 0.0},
+    {"v_x_l", 0.0},
+    {"v_y_l", 0.0},
+    {"v_x_r", 0.0},
+    {"v_y_r", 0.0}
   };
   BoundaryConditions b_c(mesh, velocity_values);
 
