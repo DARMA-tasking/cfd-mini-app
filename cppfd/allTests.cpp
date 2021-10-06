@@ -4,8 +4,8 @@
 #include <Kokkos_Core.hpp>
 #include <gtest/gtest.h>
 
-#include "meshchunk.cpp"
-#include "boundaryconditions.cpp"
+#include "mesh_chunk.cpp"
+#include "boundary_conditions.cpp"
 #include "solver.cpp"
 
 struct solver_test : testing::Test{

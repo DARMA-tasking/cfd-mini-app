@@ -1,4 +1,4 @@
-#include "boundaryconditions.h"
+#include "boundary_conditions.h"
 
 void BoundaryConditions::apply_velocity_bc(){
   for(int i = 0; i < this->mesh_chunk.get_n_points_x(); i++){

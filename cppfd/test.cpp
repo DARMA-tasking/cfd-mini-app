@@ -3,8 +3,8 @@
 #include <map>
 #include <Kokkos_Core.hpp>
 
-#include "meshchunk.cpp"
-#include "boundaryconditions.cpp"
+#include "mesh_chunk.cpp"
+#include "boundary_conditions.cpp"
 #include "solver.cpp"
 
 int main(int argc, char** argv) {

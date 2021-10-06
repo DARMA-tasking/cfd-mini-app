@@ -1,4 +1,4 @@
-#include "meshchunk.h"
+#include "mesh_chunk.h"
 
 #include <iostream>
 #include <array>

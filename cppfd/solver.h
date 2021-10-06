@@ -10,8 +10,8 @@
 #include <Kokkos_ArithTraits.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
 
-#include "meshchunk.h"
-#include "boundaryconditions.h"
+#include "mesh_chunk.h"
+#include "boundary_conditions.h"
 
 class Solver
 {
