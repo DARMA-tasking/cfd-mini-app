@@ -252,7 +252,7 @@ double Solver::assemble_Laplacian(){
   uint64_t idx = 0;
   for(uint64_t j = 0; j < n; j++){
     for(uint64_t i = 0; i < m; i++){
-      uint64_t k = this->mesh_chunk.cartesian_to_index(i, j, m, n);
+      uint64_t k = this->mesh_chunk.Cartesian_to_index(i, j, m, n);
       bool first_in_row = true;
       // assign below diagonal entries when relevant
       if(j > 0)
@@ -349,7 +349,7 @@ void Solver::predict_velocity(){
       double dvdy2 = inv_sz2 * (v_y_ij_b - 2 * v_y_ij + v_y_ij_t);
 
       // assign predicted u and v components to predicted_velocity storage
-      uint64_t k = this->mesh_chunk.cartesian_to_index(i, j, m, n);
+      uint64_t k = this->mesh_chunk.Cartesian_to_index(i, j, m, n);
       v_star(k, 0) = v_x_ij + this->delta_t * (this->nu * (dudx2 + dudy2) - (v_x_ij * dudx + v_y * dudy));
       v_star(k, 1) = v_y_ij + this->delta_t * (this->nu * (dvdx2 + dvdy2) - (v_y_ij * dvdx + v_x * dvdy));
     }
@@ -358,7 +358,7 @@ void Solver::predict_velocity(){
   // assign interior predicted velocity vectors to mesh
   for(int j = 1; j < nm1; j++){
     for(int i = 1; i < mm1; i++){
-      int k = this->mesh_chunk.cartesian_to_index(i, j, m, n);
+      int k = this->mesh_chunk.Cartesian_to_index(i, j, m, n);
       this->mesh_chunk.set_velocity_x(i, j, v_star(k, 0));
       this->mesh_chunk.set_velocity_y(i, j, v_star(k, 1));
     }
@@ -375,7 +375,7 @@ void Solver::assemble_poisson_RHS(){
       double u_l = this->mesh_chunk.get_velocity_x(i, j) + this->mesh_chunk.get_velocity_x(i, j+1);
       double v_t = this->mesh_chunk.get_velocity_y(i, j+1) + this->mesh_chunk.get_velocity_y(i+1, j+1);
       double v_b = this->mesh_chunk.get_velocity_y(i, j) + this->mesh_chunk.get_velocity_y(i+1, j);
-      uint64_t k = this->mesh_chunk.cartesian_to_index(i, j, this->mesh_chunk.get_n_cells_x(), this->mesh_chunk.get_n_cells_y());
+      uint64_t k = this->mesh_chunk.Cartesian_to_index(i, j, this->mesh_chunk.get_n_cells_x(), this->mesh_chunk.get_n_cells_y());
       this->RHS(k) = factor * (u_r - u_l + v_t - v_b);
     }
   }
