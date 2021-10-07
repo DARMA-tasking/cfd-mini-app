@@ -16,8 +16,6 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     std::cout << "Initial timestep : " << this->delta_t << ", " << "Time final : " << this->t_final << std::endl;
   }
 
-  Kokkos::Timer timer;
-
   if(this->verbosity >= 1){
     std::cout << "Applying velocity boundary conditions..." << std::endl;
   }
@@ -39,6 +37,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step at
     std::cout << "Reynolds number : " << this->Re << std::endl;
   }
 
+  Kokkos::Timer timer;
   double time1 = timer.seconds();
   if(this->verbosity > 0){
     std::cout << std::endl;

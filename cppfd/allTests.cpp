@@ -23,14 +23,14 @@ struct solver_test : testing::Test{
 
     // create mesh
     std::map<std::string, PointTypeEnum> point_types = {
-      { "t", PointTypeEnum::BOUNDARY },
       { "b", PointTypeEnum::BOUNDARY },
+      { "t", PointTypeEnum::BOUNDARY },
       { "l", PointTypeEnum::BOUNDARY },
       { "r", PointTypeEnum::BOUNDARY },
-      { "tl", PointTypeEnum::BOUNDARY },
-      { "tr", PointTypeEnum::BOUNDARY },
       { "bl", PointTypeEnum::BOUNDARY },
       { "br", PointTypeEnum::BOUNDARY },
+      { "tl", PointTypeEnum::BOUNDARY },
+      { "tr", PointTypeEnum::BOUNDARY }
     };
     MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
@@ -46,7 +46,6 @@ struct solver_test : testing::Test{
       {"v_right", 0.0}
     };
     BoundaryConditions b_c(mesh, velocity_values);
-
     solver = new Solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
   }
 };
@@ -73,7 +72,6 @@ TEST_F(solver_test, Laplacian_values_test){
     while (i < n_cols)
       dense_Laplacian[i++][j] = 0.;
   }
-
 
   // check if all values in Laplacian matrix are correct
   for(int j = 0; j < mn; j++){

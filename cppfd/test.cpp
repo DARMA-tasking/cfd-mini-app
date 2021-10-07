@@ -32,13 +32,13 @@ int main(int argc, char** argv) {
   // create mesh
   std::map<std::string, PointTypeEnum> point_types = {
     { "b", PointTypeEnum::BOUNDARY },
-    { "t", PointTypeEnum::BOUNDARY },
-    { "l", PointTypeEnum::BOUNDARY },
-    { "r", PointTypeEnum::BOUNDARY },
+    { "t", PointTypeEnum::SHARED_OWNED },
+    { "l", PointTypeEnum::GHOST },
+    { "r", PointTypeEnum::SHARED_OWNED },
     { "bl", PointTypeEnum::BOUNDARY },
     { "br", PointTypeEnum::BOUNDARY },
-    { "tl", PointTypeEnum::BOUNDARY },
-    { "tr", PointTypeEnum::BOUNDARY }
+    { "tl", PointTypeEnum::GHOST },
+    { "tr", PointTypeEnum::SHARED_OWNED }
   };
   MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
@@ -57,7 +57,6 @@ int main(int argc, char** argv) {
 
   // run numerical scheme
   Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
-  //solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::CONJUGATE_GRADIENT, Solver::adaptative_time_step::ON);
   solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
   // save results

@@ -6,6 +6,7 @@
 #include <Kokkos_Core.hpp>
 
 #include <vtkDoubleArray.h>
+#include <vtkIntArray.h>
 #include <vtkCellData.h>
 #include <vtkPointData.h>
 #include <vtkUniformGrid.h>
@@ -29,7 +30,7 @@ MeshChunk::MeshChunk(int n_x, int n_y, double cell_size,
     View<double*>("pressure", n_x * n_y);
   this->velocity = Kokkos::
     View<double**[2]>("velocity", n_x + 1, n_y + 1);
-  
+
   // set boundary point types
   for (const auto& kv : point_types){
     // interior points
@@ -154,7 +155,25 @@ void MeshChunk::write_vtk(std::string file_name){
   ug->SetOrigin(this->origin[0], this->origin[0], 0);
   ug->SetSpacing(this->h, this->h, 0);
 
-  // create cell centered scalar field
+  // create point centered type and velocity fields
+  vtkNew<vtkIntArray> point_type;
+  vtkNew<vtkDoubleArray> point_data;
+  point_type->SetNumberOfComponents(1);
+  point_type->SetName("Type");
+  point_type->SetNumberOfTuples((nx + 1) * (ny + 1));
+  point_data->SetNumberOfComponents(3);
+  point_data->SetName("Velocity");
+  point_data->SetNumberOfTuples((nx + 1) * (ny + 1));
+  for(int j = 0; j < ny +1; j++){
+    for(int i = 0; i < nx + 1; i++){
+      point_type->SetTuple1(j * (nx + 1) + i, static_cast<int>(this->point_type(i, j)));
+      point_data->SetTuple3(j * (nx + 1) + i, this->velocity(i, j, 0), this->velocity(i, j, 1), 0);
+    }
+  }
+  ug->GetPointData()->SetScalars(point_type);
+  ug->GetPointData()->SetVectors(point_data);
+
+  // create cell centered pressure field
   vtkNew<vtkDoubleArray> cell_data;
   cell_data->SetNumberOfComponents(1);
   cell_data->SetName("Pressure");
@@ -165,18 +184,6 @@ void MeshChunk::write_vtk(std::string file_name){
     }
   }
   ug->GetCellData()->SetScalars(cell_data);
-
-  // create point centered vector field
-  vtkNew<vtkDoubleArray> point_data;
-  point_data->SetNumberOfComponents(3);
-  point_data->SetName("Velocity");
-  point_data->SetNumberOfTuples((nx + 1) * (ny + 1));
-  for(int j = 0; j < ny +1; j++){
-    for(int i = 0; i < nx + 1; i++){
-      point_data->SetTuple3(j * (nx + 1) + i, this->get_velocity_x(i, j), this->get_velocity_y(i, j), 0);
-    }
-  }
-  ug->GetPointData()->SetVectors(point_data);
 
   // write vti visualization file
   vtkNew<vtkXMLImageDataWriter> output_file;

@@ -1,9 +1,9 @@
 #include "boundary_conditions.h"
 
 void BoundaryConditions::apply_velocity_bc(){
-  const uint64_t m = this->mesh_chunk.get_n_points_x() - 1;
+  const uint64_t m = this->mesh_chunk.get_n_points_x();
   const uint64_t mm1 = m - 1;
-  const uint64_t n = this->mesh_chunk.get_n_points_y() - 1;
+  const uint64_t n = this->mesh_chunk.get_n_points_y();
   const uint64_t nm1 = n - 1;
   for(uint64_t i = 0; i < m; i++){
     this->mesh_chunk.set_velocity_x(i, nm1, this->v_x_t);
