@@ -531,12 +531,12 @@ void Solver::correct_velocity(){
   double t_to_r = this->delta_t / this->rho;
   for(uint64_t j = 1; j < this->mesh_chunk.get_n_points_y() - 1; j++){
     for(uint64_t i = 1; i < this->mesh_chunk.get_n_points_x() - 1; i++){
-      double p_ur = this->mesh_chunk.get_pressure(i, j);
-      double p_ul = this->mesh_chunk.get_pressure(i-1, j);
-      double p_ll = this->mesh_chunk.get_pressure(i-1, j-1);
-      double p_lr = this->mesh_chunk.get_pressure(i, j-1);
-      this->mesh_chunk.set_velocity_x(i, j, (this->mesh_chunk.get_velocity_x(i, j) - t_to_r * (p_ur - p_ul + p_lr - p_ll) * factor));
-      this->mesh_chunk.set_velocity_y(i, j, (this->mesh_chunk.get_velocity_y(i, j) - t_to_r * (p_ur - p_lr + p_ul - p_ll) * factor));
+      double p_tl = this->mesh_chunk.get_pressure(i - 1, j);
+      double p_tr = this->mesh_chunk.get_pressure(i, j);
+      double p_bl = this->mesh_chunk.get_pressure(i-1, j - 1);
+      double p_br = this->mesh_chunk.get_pressure(i, j - 1);
+      this->mesh_chunk.set_velocity_x(i, j, (this->mesh_chunk.get_velocity_x(i, j) - t_to_r * (p_tr - p_tl + p_br - p_bl) * factor));
+      this->mesh_chunk.set_velocity_y(i, j, (this->mesh_chunk.get_velocity_y(i, j) - t_to_r * (p_tr - p_br + p_tl - p_bl) * factor));
     }
   }
 }

@@ -22,7 +22,17 @@ struct solver_test : testing::Test{
     uint64_t n_cells = 3;
 
     // create mesh
-    MeshChunk mesh(n_cells, n_cells, 1. / n_cells);
+    std::map<std::string, PointTypeEnum> point_types = {
+      { "t", PointTypeEnum::BOUNDARY },
+      { "b", PointTypeEnum::BOUNDARY },
+      { "l", PointTypeEnum::BOUNDARY },
+      { "r", PointTypeEnum::BOUNDARY },
+      { "tl", PointTypeEnum::BOUNDARY },
+      { "tr", PointTypeEnum::BOUNDARY },
+      { "bl", PointTypeEnum::BOUNDARY },
+      { "br", PointTypeEnum::BOUNDARY },
+    };
+    MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {

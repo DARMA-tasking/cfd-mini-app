@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 #include <map>
+
 #include <Kokkos_Core.hpp>
 
 #include "mesh_chunk.cpp"
@@ -29,7 +30,17 @@ int main(int argc, char** argv) {
 	    << n_cells * n_cells << "\n\n";
 
   // create mesh
-  MeshChunk mesh(n_cells, n_cells, 1. / n_cells);
+  std::map<std::string, PointTypeEnum> point_types = {
+    { "b", PointTypeEnum::BOUNDARY },
+    { "t", PointTypeEnum::BOUNDARY },
+    { "l", PointTypeEnum::BOUNDARY },
+    { "r", PointTypeEnum::BOUNDARY },
+    { "bl", PointTypeEnum::BOUNDARY },
+    { "br", PointTypeEnum::BOUNDARY },
+    { "tl", PointTypeEnum::BOUNDARY },
+    { "tr", PointTypeEnum::BOUNDARY }
+  };
+  MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {

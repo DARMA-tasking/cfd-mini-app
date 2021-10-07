@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <string>
+#include <map>
 #include <cstdio>
 
 #include <Kokkos_Core.hpp>
@@ -16,20 +17,8 @@ enum struct PointTypeEnum : int8_t {
 class MeshChunk
 {
   public:
-    MeshChunk(int n_x, int n_y, double cell_size)
-      : n_cells_x(n_x)
-      , n_cells_y(n_y)
-      , origin{0, 0}
-      , h(cell_size)
-    {
-      // instantiate internal containers
-      this->point_type = Kokkos::
-	View<PointTypeEnum**>("type", n_x + 1, n_y + 1);
-      this->pressure = Kokkos::
-	View<double*>("pressure", n_x * n_y);
-      this->velocity = Kokkos::
-	View<double**[2]>("velocity", n_x + 1, n_y + 1);
-    }
+    MeshChunk(int n_x, int n_y, double cell_size,
+	      std::map<std::string, PointTypeEnum> point_types);
 
     // setter/getter for physical cell size
     void set_cell_size(double size) { this->h = size; }
