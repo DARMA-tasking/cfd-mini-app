@@ -4,8 +4,8 @@
 #include <Kokkos_Core.hpp>
 #include <gtest/gtest.h>
 
-#include "mesh.cpp"
-#include "boundaryconditions.cpp"
+#include "mesh_chunk.cpp"
+#include "boundary_conditions.cpp"
 #include "solver.cpp"
 
 struct solver_test : testing::Test{
@@ -22,7 +22,17 @@ struct solver_test : testing::Test{
     uint64_t n_cells = 3;
 
     // create mesh
-    Mesh mesh(n_cells, n_cells, 1. / n_cells);
+    std::map<std::string, PointTypeEnum> point_types = {
+      { "b", PointTypeEnum::BOUNDARY },
+      { "t", PointTypeEnum::BOUNDARY },
+      { "l", PointTypeEnum::BOUNDARY },
+      { "r", PointTypeEnum::BOUNDARY },
+      { "bl", PointTypeEnum::BOUNDARY },
+      { "br", PointTypeEnum::BOUNDARY },
+      { "tl", PointTypeEnum::BOUNDARY },
+      { "tr", PointTypeEnum::BOUNDARY }
+    };
+    MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {
@@ -36,7 +46,6 @@ struct solver_test : testing::Test{
       {"v_right", 0.0}
     };
     BoundaryConditions b_c(mesh, velocity_values);
-
     solver = new Solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
   }
 };
@@ -63,7 +72,6 @@ TEST_F(solver_test, Laplacian_values_test){
     while (i < n_cols)
       dense_Laplacian[i++][j] = 0.;
   }
-
 
   // check if all values in Laplacian matrix are correct
   for(int j = 0; j < mn; j++){

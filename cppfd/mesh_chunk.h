@@ -1,23 +1,24 @@
 #pragma once
 #include <array>
 #include <string>
+#include <map>
 #include <cstdio>
 
 #include <Kokkos_Core.hpp>
 
-class Mesh
+enum struct PointTypeEnum : int8_t {
+  INTERIOR = 0,
+  BOUNDARY = 1,
+  SHARED_OWNED = 2,
+  GHOST = 3,
+  INVALID = 4
+};
+
+class MeshChunk
 {
   public:
-    Mesh(int n_x, int n_y, double cell_size)
-      : n_cells_x(n_x)
-      , n_cells_y(n_y)
-      , origin{0, 0}
-      , h(cell_size)
-    {
-      // instantiate containers for velocity and pressure
-      this->pressure = Kokkos::View<double*>("pressure", n_x * n_y);
-      this->velocity = Kokkos::View<double**[2]>("velocity", n_x + 1, n_y + 1);
-    }
+    MeshChunk(int n_x, int n_y, double cell_size,
+	      std::map<std::string, PointTypeEnum> point_types);
 
     // setter/getter for physical cell size
     void set_cell_size(double size) { this->h = size; }
@@ -42,6 +43,8 @@ class Mesh
     int cartesian_to_index(int i, int j, int ni, int nj);
 
     // setters/getters for mesh data
+    void set_point_type(int i, int j, PointTypeEnum t);
+    PointTypeEnum get_point_type(int i, int j);
     void set_pressure(int i, int j, double scalar);
     double get_pressure(int i, int j);
     void set_velocity_x(int i, int j, double u);
@@ -71,9 +74,12 @@ class Mesh
     // physical cell size
     double h = 1;
 
-    // mesh cell data
-    Kokkos::View<double*> pressure = {};
+    // mesh point types
+    Kokkos::View<PointTypeEnum**> point_type = {};
 
     // mesh point data
     Kokkos::View<double**[2]> velocity = {};
+
+    // mesh cell data
+    Kokkos::View<double*> pressure = {};
 };

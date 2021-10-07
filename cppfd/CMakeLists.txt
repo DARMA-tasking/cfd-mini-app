@@ -18,8 +18,8 @@ if (ccache_binary)
 endif()
 
 # Add library targets
-add_library(mesh mesh.cpp)
-add_library(boundaryconditions boundaryconditions.cpp)
+add_library(mesh_chunk mesh_chunk.cpp)
+add_library(boundary_conditions boundary_conditions.cpp)
 add_library(solver solver.cpp)
 
 # Add executable target
@@ -29,8 +29,8 @@ add_executable(allTests allTests.cpp)
 # message(STATUS "libs: ${VTK_LIBRARIES}")
 
 # Link targets to libraries
-target_link_libraries(mesh Kokkos::kokkos ${VTK_LIBRARIES})
-target_link_libraries(boundaryconditions Kokkos::kokkos)
+target_link_libraries(mesh_chunk Kokkos::kokkos ${VTK_LIBRARIES})
+target_link_libraries(boundary_conditions Kokkos::kokkos)
 target_link_libraries(solver Kokkos::kokkos Kokkos::kokkoskernels)
 target_link_libraries(test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
 target_link_libraries(allTests Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES} GTest::gtest)
