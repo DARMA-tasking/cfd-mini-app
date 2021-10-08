@@ -19,6 +19,7 @@ endif()
 
 # Add library targets
 add_library(mesh_chunk mesh_chunk.cpp)
+add_library(parallel_mesh parallel_mesh.cpp)
 add_library(boundary_conditions boundary_conditions.cpp)
 add_library(solver solver.cpp)
 
@@ -30,6 +31,7 @@ add_executable(allTests allTests.cpp)
 
 # Link targets to libraries
 target_link_libraries(mesh_chunk Kokkos::kokkos ${VTK_LIBRARIES})
+target_link_libraries(parallel_mesh Kokkos::kokkos ${VTK_LIBRARIES})
 target_link_libraries(boundary_conditions Kokkos::kokkos)
 target_link_libraries(solver Kokkos::kokkos Kokkos::kokkoskernels)
 target_link_libraries(test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})

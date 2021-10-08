@@ -5,6 +5,7 @@
 #include <Kokkos_Core.hpp>
 
 #include "mesh_chunk.cpp"
+#include "parallel_mesh.cpp"
 #include "boundary_conditions.cpp"
 #include "solver.cpp"
 
@@ -28,6 +29,9 @@ int main(int argc, char** argv) {
 	    << "\n  n_cells:: " << n_cells
 	    << "x" << n_cells << " = "
 	    << n_cells * n_cells << "\n\n";
+
+  // create parallel mesh
+  ParallelMesh p_mesh(n_cells, n_cells, 1. / n_cells, 3, 2);
 
   // create mesh
   std::map<std::string, PointTypeEnum> point_types = {

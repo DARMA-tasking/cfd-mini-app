@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <array>
-#include <cmath>
 #include <Kokkos_Core.hpp>
 
 #include <vtkDoubleArray.h>
@@ -14,14 +13,14 @@
 #include <vtkXMLImageDataReader.h>
 
 
-MeshChunk::MeshChunk(int n_x, int n_y, double cell_size,
+MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
 		     const std::map<std::string, PointTypeEnum>& point_types){
 
   // set instance variables
   this->n_cells_x = n_x;
   this->n_cells_y = n_y;
-  this->origin = {0, 0};
   this->h = cell_size;
+  this->origin = {0., 0.};
 
   // instantiate internal containers
   this->point_type = Kokkos::
@@ -89,13 +88,13 @@ uint64_t MeshChunk::Cartesian_to_index(uint64_t i, uint64_t j, uint64_t ni, uint
   }
 }
 
-void MeshChunk::set_point_type(int i, int j, PointTypeEnum t){
+void MeshChunk::set_point_type(uint64_t i, uint64_t j, PointTypeEnum t){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     this->point_type(i, j) = t;
   }
 }
 
-PointTypeEnum MeshChunk::get_point_type(int i, int j) const{
+PointTypeEnum MeshChunk::get_point_type(uint64_t i, uint64_t j) const{
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     return this->point_type(i, j);
   } else{
@@ -103,19 +102,19 @@ PointTypeEnum MeshChunk::get_point_type(int i, int j) const{
   }
 }
 
-void MeshChunk::set_velocity_x(int i, int j, double u){
+void MeshChunk::set_velocity_x(uint64_t i, uint64_t j, double u){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     this->velocity(i, j, 0) = u;
   }
 }
 
-void MeshChunk::set_velocity_y(int i, int j, double v){
+void MeshChunk::set_velocity_y(uint64_t i, uint64_t j, double v){
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     this->velocity(i, j, 1) = v;
   }
 }
 
-double MeshChunk::get_velocity_x(int i, int j) const{
+double MeshChunk::get_velocity_x(uint64_t i, uint64_t j) const{
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     return this->velocity(i, j, 0);
   } else{
@@ -123,7 +122,7 @@ double MeshChunk::get_velocity_x(int i, int j) const{
   }
 }
 
-double MeshChunk::get_velocity_y(int i, int j) const{
+double MeshChunk::get_velocity_y(uint64_t i, uint64_t j) const{
   if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
     return this->velocity(i, j, 1);
   } else{
@@ -131,14 +130,14 @@ double MeshChunk::get_velocity_y(int i, int j) const{
   }
 }
 
-void MeshChunk::set_pressure(int i, int j, double scalar){
+void MeshChunk::set_pressure(uint64_t i, uint64_t j, double scalar){
   uint64_t k = this->Cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
   if(k != -1){
     this->pressure(k) = scalar;
   }
 }
 
-double MeshChunk::get_pressure(int i, int j) const{
+double MeshChunk::get_pressure(uint64_t i, uint64_t j) const{
   uint64_t k = this->Cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
   if(k == -1){
     return std::nan("");
