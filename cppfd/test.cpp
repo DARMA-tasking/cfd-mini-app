@@ -19,7 +19,7 @@ int main(int argc, char** argv) {
   double delta_t = 0.001;
   double t_final = 0.1;
   double max_C = 0.5;
-  uint64_t n_cells = 30;
+  uint64_t n_cells = 35;
   std::cout << "Input parameters:"
 	    << "\n  density: " << density
 	    << "\n  dynamic_viscosity: " << dynamic_viscosity

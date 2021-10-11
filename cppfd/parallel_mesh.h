@@ -30,6 +30,10 @@ class ParallelMesh
     uint64_t n_cells_y;
     uint64_t n_blocks_x;
     uint64_t n_blocks_y;
+    uint64_t n_x_per_block;
+    uint64_t n_y_per_block;
+    uint64_t n_x_rem;
+    uint64_t n_y_rem;
 
     // physical cell size
     double h = 1.;
