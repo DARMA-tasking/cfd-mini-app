@@ -62,7 +62,7 @@ class Mesh
     void write_txt(std::string file_name, std::string output_type);
 
   private:
-    // physical origin f the mesh
+    // physical origin of the mesh
     std::array<double,2> origin;
 
     // dimension characteristics of the mesh

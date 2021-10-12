@@ -41,33 +41,42 @@ def cppfd_results_reader(path_to_file):
     return(velocity_values)
 
 def main():
-    # input paths to result files and size of square mesh
+    # input paths to result files
     path_to_openFoam_file = str(sys.argv[1])
     path_to_cppfd_file = str(sys.argv[2])
 
     # extract velocity values from openFoam results
     openFoam_velocity_values = openFoam_results_reader(path_to_openFoam_file)
-    N_oF = int(round(np.sqrt(len(openFoam_velocity_values))))
+    n_oF = int(round(np.sqrt(len(openFoam_velocity_values))))
 
     # reshape array of horizontal velocities in correct order
     openFoam_velocity_values = openFoam_velocity_values[::-1]
     t = np.array([openFoam_velocity_values[i][0] for i in range(len(openFoam_velocity_values))])
-    openFoam_velocity_matrix = t.reshape((N_oF, N_oF))
+    openFoam_velocity_matrix = t.reshape((n_oF, n_oF))
 
     # extract velocity values from cppfd results and reshape to array of horizontal velocities
     cppfd_velocity_values = cppfd_results_reader(path_to_cppfd_file)
-    N_cppfd = int(round(np.sqrt(len(cppfd_velocity_values))))
+    n_cppfd = int(round(np.sqrt(len(cppfd_velocity_values))))
     t = np.array([cppfd_velocity_values[i][0] for i in range(len(cppfd_velocity_values))])
-    cppfd_velocity_matrix = t.reshape((N_cppfd, N_cppfd))
+    cppfd_velocity_matrix = t.reshape((n_cppfd, n_cppfd))
 
     # plot velocities along center line
-    y_openFoam = [openFoam_velocity_matrix[i][N_oF // 2] for i in range(N_oF - 1, -1, -1)]
-    y_cppfd = [cppfd_velocity_matrix[i][N_cppfd // 2] for i in range(N_cppfd - 1, -1, -1)]
-    x_openFoam = np.arange(0, 1, 1 / N_oF)
-    x_cppfd = np.arange(0, 1, 1 / N_cppfd)
-    plt.plot(x_openFoam, y_openFoam)
-    plt.plot(x_cppfd, y_cppfd)
+    y_openFoam = [openFoam_velocity_matrix[i][n_oF // 2] for i in range(n_oF - 1, -1, -1)]
+    y_cppfd = [cppfd_velocity_matrix[i][n_cppfd // 2] for i in range(n_cppfd - 1, -1, -1)]
+    x_openFoam = np.arange(0, 1, 1 / n_oF)
+    x_cppfd = np.arange(0, 1, 1 / n_cppfd)
+    plt.plot(x_openFoam, y_openFoam, label = 'openFoam')
+    plt.plot(x_cppfd, y_cppfd, label = 'cppfd')
+    plt.title('Horizontal velocities along vertical center line of mesh')
+    plt.xlabel('y/L')
+    plt.ylabel('vel_x')
+    plt.axhline(0, color='black')
+    plt.axvline(0, color='black')
+    plt.grid()
+    plt.legend(loc='best')
     plt.show()
+    # plt.savefig('comparaison_results.png')
+    # print('Saved plot: comparaison_results.png')
 
 if __name__ == '__main__':
     main()

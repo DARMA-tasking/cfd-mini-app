@@ -142,20 +142,22 @@ void Mesh::write_txt(std::string file_name, std::string output_type){
   file.open(file_name);
 
   if(!file){
-    std::cout<<"Error in creating text file"<<std::endl;
+    std::cout << "Error in creating text file" << std::endl;
   }
 
   if(output_type == "velocity"){
     for(int j = ny; j > - 1; j--){
+      std::cout << j << std::endl;
       for(int i = 0; i < nx + 1; i++){
-        file<<this->get_velocity_x(i, j)<<" "<<this->get_velocity_y(i, j)<<"\n";
+        std::cout << i << std::endl;
+        file << this->get_velocity_x(i, j) << " " << this->get_velocity_y(i, j) << "\n";
       }
     }
   }
   else if(output_type == "pressure"){
     for(int j = ny; j > - 1; j--){
       for(int i = 0; i < nx + 1; i++){
-        file<<this->get_pressure(i, j)<<"\n";
+        file << this->get_pressure(i, j) << "\n";
       }
     }
   }
@@ -165,6 +167,8 @@ void Mesh::write_txt(std::string file_name, std::string output_type){
 
   //closing the file
   file.close();
-  std::cout<<std::endl;
-  std::cout<<"Data file created: \""<<file_name<<"\""<<std::endl;
+  if(file){
+    std::cout << std::endl;
+    std::cout << "Data file created: \"" << file_name << "\"" << std::endl;
+  }
 }
