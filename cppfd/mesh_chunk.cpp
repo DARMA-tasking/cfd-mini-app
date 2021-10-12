@@ -14,7 +14,7 @@
 
 
 MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
-		     const std::map<std::string, PointTypeEnum>& point_types){
+		     const std::map<uint8_t, PointTypeEnum>& point_types){
 
   // set instance variables
   this->n_cells_x = n_x;
@@ -33,38 +33,38 @@ MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
   // set boundary point types
   for (const auto& kv : point_types){
     // interior points
-    if (kv.first == "i")
+    if (kv.first == 8)
       for(uint64_t j = 1; j < n_y; j++)
 	for(uint64_t i = 1; i < n_x; i++)
 	  this->point_type(i, j) = kv.second;
 
-    // non-corner edge points
-    else if (kv.first == "b")
-      for(uint64_t i = 1; i < n_x; i++)
-	this->point_type(i, 0) = kv.second;
-    else if (kv.first == "t")
-      for(uint64_t i = 1; i < n_x; i++)
-	this->point_type(i, n_y) = kv.second;
-    else if (kv.first == "l")
+    // non-corner edge points in QUAD8 order
+    else if (kv.first == 7)
       for(uint64_t j = 1; j < n_y; j++)
 	this->point_type(0, j) = kv.second;
-    else if (kv.first == "r")
+    else if (kv.first == 6)
+      for(uint64_t i = 1; i < n_x; i++)
+	this->point_type(i, n_y) = kv.second;
+    else if (kv.first == 5)
       for(uint64_t j = 1; j < n_y; j++)
 	this->point_type(n_x, j) = kv.second;
+    else if (kv.first == 4)
+      for(uint64_t i = 1; i < n_x; i++)
+	this->point_type(i, 0) = kv.second;
 
-    // corner points
-    else if (kv.first == "bl")
-      this->point_type(0, 0) = kv.second;
-    else if (kv.first == "br")
-      this->point_type(n_x, 0) = kv.second;
-    else if (kv.first == "tl")
+    // corner points in QUAD4 order
+    else if (kv.first == 3)
       this->point_type(0, n_y) = kv.second;
-    else if (kv.first == "tr")
+    else if (kv.first == 2)
       this->point_type(n_x, n_y) = kv.second;
+    else if (kv.first == 1)
+      this->point_type(n_x, 0) = kv.second;
+    else if (kv.first == 0)
+      this->point_type(0, 0) = kv.second;
   }
 }
 
-void MeshChunk::set_origin(double x, double y){
+void MeshChunk::set_origin(const double x, const double y){
   this->origin[0] = x;
   this->origin[1] = y;
 }
@@ -146,7 +146,7 @@ double MeshChunk::get_pressure(uint64_t i, uint64_t j) const{
   }
 }
 
-void MeshChunk::write_vtk(std::string file_name){
+void MeshChunk::write_VTK(const std::string& file_name){
   // instantiate VTK uniform grid from mesh chunk parameters
   vtkNew<vtkUniformGrid> ug;
   uint64_t n_c_x = this->n_cells_x;

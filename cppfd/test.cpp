@@ -32,17 +32,18 @@ int main(int argc, char** argv) {
 
   // create parallel mesh
   ParallelMesh p_mesh(n_cells, n_cells, 1. / n_cells, 3, 2);
+  p_mesh.write_VTK("p_test.vti");
 
   // create mesh
-  std::map<std::string, PointTypeEnum> point_types = {
-    { "b", PointTypeEnum::BOUNDARY },
-    { "t", PointTypeEnum::SHARED_OWNED },
-    { "l", PointTypeEnum::GHOST },
-    { "r", PointTypeEnum::SHARED_OWNED },
-    { "bl", PointTypeEnum::BOUNDARY },
-    { "br", PointTypeEnum::BOUNDARY },
-    { "tl", PointTypeEnum::GHOST },
-    { "tr", PointTypeEnum::SHARED_OWNED }
+  std::map<uint8_t, PointTypeEnum> point_types = {
+    { 4, PointTypeEnum::BOUNDARY },
+    { 6, PointTypeEnum::SHARED_OWNED },
+    { 7, PointTypeEnum::GHOST },
+    { 5, PointTypeEnum::SHARED_OWNED },
+    { 0, PointTypeEnum::BOUNDARY },
+    { 1, PointTypeEnum::BOUNDARY },
+    { 3, PointTypeEnum::GHOST },
+    { 2, PointTypeEnum::SHARED_OWNED }
   };
   MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
@@ -64,7 +65,7 @@ int main(int argc, char** argv) {
   solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
   // save results
-  mesh.write_vtk("test.vti");
+  mesh.write_VTK("test.vti");
 
   // terminate cleanly
   return 0;

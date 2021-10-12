@@ -1,6 +1,9 @@
 #pragma once
 #include <cstdio>
 #include <array>
+#include <vector>
+
+#include "mesh_chunk.h"
 
 class ParallelMesh
 {
@@ -18,8 +21,11 @@ class ParallelMesh
     double get_cell_size() const { return this->h; }
 
     // setter/getter for physical origin member variable
-    void set_origin(double x, double y);
+    void set_origin(const double x, const double y);
     std::array<double,2> get_origin() {return this->origin; }
+
+    // writer to VTK files
+    void write_VTK(const std::string& file_stem);
 
   private:
     // physical origin of the mesh block
@@ -30,13 +36,14 @@ class ParallelMesh
     uint64_t n_cells_y;
     uint64_t n_blocks_x;
     uint64_t n_blocks_y;
-    uint64_t n_x_per_block;
-    uint64_t n_y_per_block;
-    uint64_t n_x_rem;
-    uint64_t n_y_rem;
+    uint64_t q_x;
+    uint64_t q_y;
+    uint64_t r_x;
+    uint64_t r_y;
 
     // physical cell size
     double h = 1.;
 
-    // 2-D Cartesian array of mesh chunks
+    // Storage for mesh chunks
+    std::vector<MeshChunk> mesh_chunks = {};
 };

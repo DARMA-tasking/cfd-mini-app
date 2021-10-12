@@ -22,15 +22,15 @@ struct solver_test : testing::Test{
     uint64_t n_cells = 3;
 
     // create mesh
-    std::map<std::string, PointTypeEnum> point_types = {
-      { "b", PointTypeEnum::BOUNDARY },
-      { "t", PointTypeEnum::BOUNDARY },
-      { "l", PointTypeEnum::BOUNDARY },
-      { "r", PointTypeEnum::BOUNDARY },
-      { "bl", PointTypeEnum::BOUNDARY },
-      { "br", PointTypeEnum::BOUNDARY },
-      { "tl", PointTypeEnum::BOUNDARY },
-      { "tr", PointTypeEnum::BOUNDARY }
+    std::map<uint8_t, PointTypeEnum> point_types = {
+      { 4, PointTypeEnum::BOUNDARY },
+      { 6, PointTypeEnum::SHARED_OWNED },
+      { 7, PointTypeEnum::GHOST },
+      { 5, PointTypeEnum::SHARED_OWNED },
+      { 0, PointTypeEnum::BOUNDARY },
+      { 1, PointTypeEnum::BOUNDARY },
+      { 3, PointTypeEnum::GHOST },
+      { 2, PointTypeEnum::SHARED_OWNED }
     };
     MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
