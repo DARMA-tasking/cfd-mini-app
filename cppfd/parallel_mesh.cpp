@@ -8,20 +8,18 @@
 
 ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 			   uint16_t n_p, uint16_t n_q,
-			   double o_x, double o_y){
+			   double o_x, double o_y)
+  : n_cells_x(n_x)
+  , n_cells_y(n_y)
+  , n_blocks_x(n_p)
+  , n_blocks_y(n_q)
+  , h(cell_size)
+  , origin({o_x, o_y})
+  , q_x (n_x / n_p)
+  , q_y (n_y / n_q)
+  , r_x (n_x % n_p)
+  , r_y (n_y % n_q){
 
-  // set instance variables
-  this->n_cells_x = n_x;
-  this->n_cells_y = n_y;
-  this->n_blocks_x = n_p;
-  this->n_blocks_y = n_q;
-  this->h = cell_size;
-  this->origin = {o_x, o_y};
-  this->q_x = n_x / n_p;
-  this->q_y = n_y / n_q;
-  this->r_x = n_x % n_p;
-  this->r_y = n_y % n_q;
-  
   // iterate over row (Y) major over mesh chunks
   for (auto q = 0; q < n_q; q++){
     // determine row height

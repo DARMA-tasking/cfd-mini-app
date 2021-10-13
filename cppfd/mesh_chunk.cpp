@@ -15,13 +15,11 @@
 
 MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
 		     const std::map<uint8_t, PointTypeEnum>& point_types,
-		     double o_x, double o_y){
-
-  // set instance variables
-  this->n_cells_x = n_x;
-  this->n_cells_y = n_y;
-  this->h = cell_size;
-  this->origin = {o_x, o_y};
+		     double o_x, double o_y)
+  : n_cells_x(n_x)
+  , n_cells_y(n_y)
+  , h(cell_size)
+  , origin({o_x, o_y}){
 
   // instantiate internal containers
   this->point_type = Kokkos::
