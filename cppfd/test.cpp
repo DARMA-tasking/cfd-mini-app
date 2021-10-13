@@ -32,7 +32,6 @@ int main(int argc, char** argv) {
 
   // create parallel mesh
   ParallelMesh p_mesh(n_cells, n_cells, 1. / n_cells, 3, 2);
-  p_mesh.write_VTK("p_test.vti");
 
   // create mesh
   std::map<uint8_t, PointTypeEnum> point_types = {
@@ -65,8 +64,24 @@ int main(int argc, char** argv) {
   solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
   // save results
-  mesh.write_VTK("test.vti");
+  std::string file_name = mesh.write_vti("test");
+  std::cout<< std::endl
+	   << "Created VTK regular mesh file: \""
+	   << file_name<<"\""
+	   << std::endl;
+
+  auto names = p_mesh.write_vti("p_test_");
+  std::cout<< std::endl
+	   << "Created VTK regular mesh chunk files:"
+	   << std::endl;
+  for (const auto& it_names : names){
+    std::cout<< "  \""
+	     << it_names.second
+	     << '\"'
+	     << std::endl;
+  }
 
   // terminate cleanly
+  std::cout<< std::endl;
   return 0;
 }

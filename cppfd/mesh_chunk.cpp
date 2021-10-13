@@ -14,13 +14,14 @@
 
 
 MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
-		     const std::map<uint8_t, PointTypeEnum>& point_types){
+		     const std::map<uint8_t, PointTypeEnum>& point_types,
+		     double o_x, double o_y){
 
   // set instance variables
   this->n_cells_x = n_x;
   this->n_cells_y = n_y;
   this->h = cell_size;
-  this->origin = {0., 0.};
+  this->origin = {o_x, o_y};
 
   // instantiate internal containers
   this->point_type = Kokkos::
@@ -62,11 +63,6 @@ MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
     else if (kv.first == 0)
       this->point_type(0, 0) = kv.second;
   }
-}
-
-void MeshChunk::set_origin(const double x, const double y){
-  this->origin[0] = x;
-  this->origin[1] = y;
 }
 
 std::array<uint64_t,2> MeshChunk::index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const{
@@ -146,7 +142,7 @@ double MeshChunk::get_pressure(uint64_t i, uint64_t j) const{
   }
 }
 
-void MeshChunk::write_VTK(const std::string& file_name){
+std::string MeshChunk::write_vti(const std::string& file_name) const{
   // instantiate VTK uniform grid from mesh chunk parameters
   vtkNew<vtkUniformGrid> ug;
   uint64_t n_c_x = this->n_cells_x;
@@ -154,6 +150,7 @@ void MeshChunk::write_VTK(const std::string& file_name){
   uint64_t n_p_x = n_c_x + 1;
   uint64_t n_p_y = n_c_y + 1;
   ug->SetDimensions(n_p_x, n_p_y, 1);
+  std::cout << this->origin[0] << " " <<  this->origin[1] << std::endl;
   ug->SetOrigin(this->origin[0], this->origin[1], 0);
   ug->SetSpacing(this->h, this->h, 0);
 
@@ -189,10 +186,11 @@ void MeshChunk::write_VTK(const std::string& file_name){
 
   // write vti visualization file
   vtkNew<vtkXMLImageDataWriter> output_file;
-  output_file->SetFileName(file_name.c_str());
+  std::string full_file_name = file_name + ".vti";
+  output_file->SetFileName(full_file_name.c_str());
   output_file->SetInputData(ug);
   output_file->Write();
 
-  std::cout<<std::endl;
-  std::cout<<"Visualization file created: \""<<file_name<<"\""<<std::endl;
+  // return fill name with extension
+  return full_file_name;
 }

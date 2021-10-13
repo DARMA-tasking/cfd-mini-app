@@ -18,7 +18,8 @@ class MeshChunk
 {
   public:
     MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
-	      const std::map<uint8_t, PointTypeEnum>& point_types);
+	      const std::map<uint8_t, PointTypeEnum>& point_types,
+	      double o_x = 0., double o_y = 0.);
 
     // only getters for unchangeable mesh characteristics
     uint64_t get_n_cells_x() const { return this->n_cells_x; }
@@ -26,9 +27,6 @@ class MeshChunk
     uint64_t get_n_points_x() const { return this->n_cells_x + 1; }
     uint64_t get_n_points_y() const { return this->n_cells_y + 1; }
     double get_cell_size() const { return this->h; }
-
-    // setter/getter for physical origin member variable
-    void set_origin(const double x, const double y);
     std::array<double,2> get_origin() const {return this->origin; }
 
     // coordinate systems converters
@@ -52,7 +50,7 @@ class MeshChunk
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
 
     // writer to VTK file
-    void write_VTK(const std::string& file_name);
+    std::string write_vti(const std::string& file_name) const;
 
   private:
     // physical origin of the mesh block
