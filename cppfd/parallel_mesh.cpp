@@ -26,7 +26,7 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
     auto n = (q < this->r_y) ? this->q_y + 1 : this->q_y;
     
     // initialze column (X) horizontal origin
-    o_x = this->get_origin()[0];
+    o_x = this->origin[0];
 
     // iterate over column (X) minor over mesh chunks
     for (auto p = 0; p < n_p; p++){
@@ -48,9 +48,9 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
       if (q == n_q - 1)
 	pt[2] = pt[3] = pt[6] = PointTypeEnum::BOUNDARY;
 
-      // instantiate and store new mesh block
-      this->mesh_chunks.push_back(MeshChunk(m, n, this->h, pt, o_x, o_y));
-      std::cout << o_x << " " << o_y << std::endl;
+      // append new mesh block to existing ones
+      this->mesh_chunks.emplace_back(m, n, this->h, pt, o_x, o_y);
+
       // slide horizontal origin rightward
       o_x += m * this->h;
     } // p
