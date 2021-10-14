@@ -34,16 +34,9 @@ int main(int argc, char** argv) {
   ParallelMesh p_mesh(n_cells, n_cells, 1. / n_cells, 3, 2);
 
   // create mesh
-  std::map<uint8_t, PointTypeEnum> point_types = {
-    { 4, PointTypeEnum::BOUNDARY },
-    { 6, PointTypeEnum::SHARED_OWNED },
-    { 7, PointTypeEnum::GHOST },
-    { 5, PointTypeEnum::SHARED_OWNED },
-    { 0, PointTypeEnum::BOUNDARY },
-    { 1, PointTypeEnum::BOUNDARY },
-    { 3, PointTypeEnum::GHOST },
-    { 2, PointTypeEnum::SHARED_OWNED }
-  };
+  std::map<uint8_t, PointTypeEnum> point_types;
+  for (uint8_t i = 0; i < 8; ++i)
+    point_types[i] = PointTypeEnum::BOUNDARY;
   MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
 
   // define boundary conditions

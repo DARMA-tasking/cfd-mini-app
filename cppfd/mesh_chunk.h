@@ -6,6 +6,8 @@
 
 #include <Kokkos_Core.hpp>
 
+#include <vtkSmartPointer.h>
+
 enum struct PointTypeEnum : int8_t {
   INTERIOR = 0,
   BOUNDARY = 1,
@@ -13,6 +15,7 @@ enum struct PointTypeEnum : int8_t {
   GHOST = 3,
   INVALID = 4
 };
+class vtkUniformGrid;
 
 class MeshChunk
 {
@@ -48,6 +51,9 @@ class MeshChunk
 
     // setter to assign new mesh cell data
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
+
+    // converter to VTK uniform grid
+    vtkSmartPointer<vtkUniformGrid> make_VTK_uniform_grid() const;
 
     // writer to VTK file
     std::string write_vti(const std::string& file_name) const;

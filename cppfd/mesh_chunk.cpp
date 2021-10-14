@@ -9,8 +9,8 @@
 #include <vtkCellData.h>
 #include <vtkPointData.h>
 #include <vtkUniformGrid.h>
+#include <vtkSmartPointer.h>
 #include <vtkXMLImageDataWriter.h>
-#include <vtkXMLImageDataReader.h>
 
 
 MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
@@ -140,21 +140,22 @@ double MeshChunk::get_pressure(uint64_t i, uint64_t j) const{
   }
 }
 
-std::string MeshChunk::write_vti(const std::string& file_name) const{
+vtkSmartPointer<vtkUniformGrid> MeshChunk::make_VTK_uniform_grid() const{
   // instantiate VTK uniform grid from mesh chunk parameters
-  vtkNew<vtkUniformGrid> ug;
+  vtkSmartPointer<vtkUniformGrid> ug = vtkSmartPointer<vtkUniformGrid>::New();
   uint64_t n_c_x = this->n_cells_x;
   uint64_t n_c_y = this->n_cells_y;
   uint64_t n_p_x = n_c_x + 1;
   uint64_t n_p_y = n_c_y + 1;
   ug->SetDimensions(n_p_x, n_p_y, 1);
-  std::cout << this->origin[0] << " " <<  this->origin[1] << std::endl;
   ug->SetOrigin(this->origin[0], this->origin[1], 0);
   ug->SetSpacing(this->h, this->h, 0);
 
   // create point centered type and velocity fields
-  vtkNew<vtkIntArray> point_type;
-  vtkNew<vtkDoubleArray> point_data;
+  vtkSmartPointer<vtkIntArray>
+    point_type = vtkSmartPointer<vtkIntArray>::New();
+  vtkSmartPointer<vtkDoubleArray>
+    point_data = vtkSmartPointer<vtkDoubleArray>::New();
   point_type->SetNumberOfComponents(1);
   point_type->SetName("Type");
   point_type->SetNumberOfTuples(n_p_x * n_p_y);
@@ -171,7 +172,8 @@ std::string MeshChunk::write_vti(const std::string& file_name) const{
   ug->GetPointData()->SetVectors(point_data);
 
   // create cell centered pressure field
-  vtkNew<vtkDoubleArray> cell_data;
+  vtkSmartPointer<vtkDoubleArray>
+    cell_data = vtkSmartPointer<vtkDoubleArray>::New();
   cell_data->SetNumberOfComponents(1);
   cell_data->SetName("Pressure");
   cell_data->SetNumberOfValues(n_c_x * n_c_y);
@@ -182,11 +184,19 @@ std::string MeshChunk::write_vti(const std::string& file_name) const{
   }
   ug->GetCellData()->SetScalars(cell_data);
 
-  // write vti visualization file
-  vtkNew<vtkXMLImageDataWriter> output_file;
+  // return VTK smart pointer to uniform grid
+  return ug;
+}
+
+std::string MeshChunk::write_vti(const std::string& file_name) const{
+  // assemble full file name with extension
   std::string full_file_name = file_name + ".vti";
+
+  // write VTK image data (vti) file
+  vtkSmartPointer<vtkXMLImageDataWriter>
+    output_file = vtkSmartPointer<vtkXMLImageDataWriter>::New();
   output_file->SetFileName(full_file_name.c_str());
-  output_file->SetInputData(ug);
+  output_file->SetInputData(this->make_VTK_uniform_grid());
   output_file->Write();
 
   // return fill name with extension
