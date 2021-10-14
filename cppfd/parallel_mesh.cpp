@@ -1,10 +1,14 @@
 #include "parallel_mesh.h"
 
-#include <iomanip>
 #include <iostream>
 #include <array>
 #include <map>
-#include <cmath> 
+#include <cmath>
+
+#include <vtkSmartPointer.h>
+#include <vtkUniformGrid.h>
+#include <vtkMultiBlockDataSet.h>
+#include <vtkXMLMultiBlockDataWriter.h>
 
 ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 			   uint16_t n_p, uint16_t n_q,
@@ -24,7 +28,7 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
   for (auto q = 0; q < n_q; q++){
     // determine row height
     auto n = (q < this->r_y) ? this->q_y + 1 : this->q_y;
-    
+
     // initialze column (X) horizontal origin
     o_x = this->origin[0];
 
@@ -59,29 +63,26 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
   } // q
 }
 
-std::map<uint16_t, std::string> ParallelMesh::
-write_vti(const std::string& file_stem) const{
-  // determine 0-padding extent
-  uint8_t z_width = static_cast<uint8_t>
-    (ceil(log10(this->mesh_chunks.size())));
+std::string ParallelMesh::write_vtm(const std::string& file_name) const{
+  // assemble full file name with extension
+  std::string full_file_name = file_name + ".vtm";
 
-  // initialize mesh chunks counter and name container
+  // aggregate all mesh chunks as VTK multi-block data set
+  vtkSmartPointer<vtkMultiBlockDataSet>
+    mbs = vtkSmartPointer<vtkMultiBlockDataSet>::New();
+  mbs->SetNumberOfBlocks(this->mesh_chunks.size());
   uint16_t i = 0;
-  std::map<uint16_t, std::string> file_name_map;
+  for (const auto& it_mesh_chunks : this->mesh_chunks)
+    mbs->SetBlock(i++, it_mesh_chunks.make_VTK_uniform_grid().GetPointer());
 
-  // iterate pover mesh chunks
-  for (const auto& it_mesh_chunks : this->mesh_chunks){
-    // assemble current chunk file name
-    std::ostringstream ss;
-    ss << file_stem
-       << std::setfill('0')
-       << std::setw(z_width)
-       << i;
+  // write VTK multi-block data set (vtm) file
+  std::cout << full_file_name << std::endl;
+  vtkSmartPointer<vtkXMLMultiBlockDataWriter>
+    output_file = vtkSmartPointer<vtkXMLMultiBlockDataWriter>::New();
+  output_file->SetFileName(full_file_name.c_str());
+  output_file->SetInputData(mbs);
+  output_file->Write();
 
-    // write mesh chunk file and increment counter
-    file_name_map[i++] = it_mesh_chunks.write_vti(ss.str());
-  }
-
-  // return map of assembled file names
-  return file_name_map;
+  // return fill name with extension
+  return full_file_name;
 }

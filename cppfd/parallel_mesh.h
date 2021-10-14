@@ -2,7 +2,6 @@
 #include <cstdio>
 #include <array>
 #include <vector>
-#include <map>
 
 #include "mesh_chunk.h"
 
@@ -24,7 +23,7 @@ class ParallelMesh
     std::array<double,2> get_origin() const {return this->origin; }
 
     // writer to VTK files
-    std::map<uint16_t, std::string> write_vti(const std::string&) const;
+    std::string write_vtm(const std::string&) const;
 
   private:
     // physical origin of the mesh block

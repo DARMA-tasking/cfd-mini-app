@@ -12,7 +12,6 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLImageDataWriter.h>
 
-
 MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
 		     const std::map<uint8_t, PointTypeEnum>& point_types,
 		     double o_x, double o_y)
