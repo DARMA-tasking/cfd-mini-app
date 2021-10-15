@@ -38,19 +38,39 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
       auto m = (p < this->r_x) ? this->q_x + 1 : this->q_x;
 
       // create default mesh chunk boundary point types
-      std::map<uint8_t, PointTypeEnum> pt;
-      pt[0] = pt[1] = pt[3] = pt[4] = pt[7] = PointTypeEnum::GHOST;
-      pt[2] = pt[5] = pt[6] = PointTypeEnum::SHARED_OWNED;
+      std::map<PointIndexEnum, PointTypeEnum> pt = {
+        {PointIndexEnum::CORNER_0, PointTypeEnum::GHOST},
+	{PointIndexEnum::CORNER_2, PointTypeEnum::SHARED_OWNED},
+	{PointIndexEnum::CORNER_1, PointTypeEnum::GHOST},
+	{PointIndexEnum::CORNER_3, PointTypeEnum::GHOST},
+	{PointIndexEnum::EDGE_0, PointTypeEnum::GHOST},
+	{PointIndexEnum::EDGE_1, PointTypeEnum::SHARED_OWNED},
+	{PointIndexEnum::EDGE_2, PointTypeEnum::SHARED_OWNED},
+	{PointIndexEnum::EDGE_3, PointTypeEnum::GHOST},
+	{PointIndexEnum::INTERIOR, PointTypeEnum::INTERIOR}
+      };
 
       // override outer boundary point types when applicable
-      if (p == 0)
-	pt[0] = pt[3] = pt[7] = PointTypeEnum::BOUNDARY;
-      if (p == n_p - 1)
-	pt[1] = pt[2] = pt[5] = PointTypeEnum::BOUNDARY;
       if (q == 0)
-	pt[0] = pt[1] = pt[4] = PointTypeEnum::BOUNDARY;
+	pt[PointIndexEnum::EDGE_0]
+	  = pt[PointIndexEnum::CORNER_0]
+	  = pt[PointIndexEnum::CORNER_1]
+	  = PointTypeEnum::BOUNDARY;
+      if (p == n_p - 1)
+	pt[PointIndexEnum::EDGE_1]
+	  = pt[PointIndexEnum::CORNER_1]
+	  = pt[PointIndexEnum::CORNER_2]
+	  = PointTypeEnum::BOUNDARY;
       if (q == n_q - 1)
-	pt[2] = pt[3] = pt[6] = PointTypeEnum::BOUNDARY;
+	pt[PointIndexEnum::EDGE_2]
+	  = pt[PointIndexEnum::CORNER_2]
+	  = pt[PointIndexEnum::CORNER_3]
+	  = PointTypeEnum::BOUNDARY;
+      if (p == 0)
+	pt[PointIndexEnum::EDGE_3]
+	  = pt[PointIndexEnum::CORNER_3]
+	  = pt[PointIndexEnum::CORNER_0]
+	  = PointTypeEnum::BOUNDARY;
 
       // append new mesh block to existing ones
       this->mesh_chunks.emplace_back(m, n, this->h, pt, o_x, o_y);

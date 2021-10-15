@@ -8,6 +8,18 @@
 
 #include <vtkSmartPointer.h>
 
+enum struct PointIndexEnum : int8_t {
+  CORNER_0 = 0,
+  CORNER_1 = 1,
+  CORNER_2 = 2,
+  CORNER_3 = 3,
+  EDGE_0 = 4,
+  EDGE_1 = 5,
+  EDGE_2 = 6,
+  EDGE_3 = 7,
+  INTERIOR = 8
+};
+
 enum struct PointTypeEnum : int8_t {
   INTERIOR = 0,
   BOUNDARY = 1,
@@ -15,13 +27,14 @@ enum struct PointTypeEnum : int8_t {
   GHOST = 3,
   INVALID = 4
 };
+
 class vtkUniformGrid;
 
 class MeshChunk
 {
   public:
     MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
-	      const std::map<uint8_t, PointTypeEnum>& point_types,
+	      const std::map<PointIndexEnum, PointTypeEnum>& point_types,
 	      double o_x = 0., double o_y = 0.);
 
     // only getters for unchangeable mesh characteristics
