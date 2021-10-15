@@ -25,17 +25,17 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
   , r_y (n_y % n_q){
 
   // iterate over row (Y) major over mesh chunks
-  for (auto q = 0; q < n_q; q++){
+  for (uint64_t q = 0; q < n_q; q++){
     // determine row height
-    auto n = (q < this->r_y) ? this->q_y + 1 : this->q_y;
+    uint64_t n = (q < this->r_y) ? this->q_y + 1 : this->q_y;
 
     // initialze column (X) horizontal origin
     o_x = this->origin[0];
 
     // iterate over column (X) minor over mesh chunks
-    for (auto p = 0; p < n_p; p++){
+    for (uint64_t p = 0; p < n_p; p++){
       // determine column width
-      auto m = (p < this->r_x) ? this->q_x + 1 : this->q_x;
+      uint64_t m = (p < this->r_x) ? this->q_x + 1 : this->q_x;
 
       // create default mesh chunk boundary point types
       std::map<PointIndexEnum, PointTypeEnum> pt = {
@@ -73,7 +73,10 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 	  = PointTypeEnum::BOUNDARY;
 
       // append new mesh block to existing ones
-      this->mesh_chunks.emplace_back(m, n, this->h, pt, o_x, o_y);
+      this->mesh_chunks.emplace
+	(std::piecewise_construct,
+	 std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
+	 std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
 
       // slide horizontal origin rightward
       o_x += m * this->h;
@@ -93,7 +96,7 @@ std::string ParallelMesh::write_vtm(const std::string& file_name) const{
   mbs->SetNumberOfBlocks(this->mesh_chunks.size());
   uint16_t i = 0;
   for (const auto& it_mesh_chunks : this->mesh_chunks)
-    mbs->SetBlock(i++, it_mesh_chunks.make_VTK_uniform_grid().GetPointer());
+    mbs->SetBlock(i++, it_mesh_chunks.second.make_VTK_uniform_grid().GetPointer());
 
   // write VTK multi-block data set (vtm) file
   std::cout << full_file_name << std::endl;

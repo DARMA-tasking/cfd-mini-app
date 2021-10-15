@@ -1,7 +1,7 @@
 #pragma once
 #include <cstdio>
 #include <array>
-#include <vector>
+#include <map>
 
 #include "mesh_chunk.h"
 
@@ -43,5 +43,5 @@ class ParallelMesh
     double h = 1.;
 
     // Storage for mesh chunks
-    std::vector<MeshChunk> mesh_chunks = {};
+    std::map<std::array<uint64_t,2>,MeshChunk> mesh_chunks = {};
 };
