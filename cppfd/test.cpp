@@ -39,6 +39,13 @@ int main(int argc, char** argv) {
     for (uint64_t m = 0; m < n_cells; m++){
       LocalCoordinates loc = p_mesh.GlobalToLocalCellIndices(m, n);
       block_counts[{loc.block[0], loc.block[1]}] ++;
+      auto g = p_mesh.LocalToGlobalCellIndices(loc);
+      if (m != g[0])
+	std::cout << "** ERROR: "
+		  << m << " != " << g[0] << "\n";
+      if (n != g[1])
+	std::cout << "** ERROR: "
+		  << n << " != " << g[1] << "\n";
     }
   std::cout << "Mesh block counts in "
 	    << n_p << " x " << n_q

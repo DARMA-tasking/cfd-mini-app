@@ -25,9 +25,9 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
   , r_x (n_x % n_p)
   , r_y (n_y % n_q){
 
-  // Compute fixed offset depending on Euclidean quotients
-  this->offset_x = this->r_x * (this->q_x + 1);
-  this->offset_y = this->r_y * (this->q_y + 1);
+  // Compute cutoff between wide and narrow blocks
+  this->cutoff_x = this->r_x * (this->q_x + 1);
+  this->cutoff_y = this->r_y * (this->q_y + 1);
 
   // iterate over row (Y) major over mesh chunks
   for (uint64_t q = 0; q < n_q; q++){
@@ -99,34 +99,85 @@ GlobalToLocalCellIndices(uint64_t m, uint64_t n) const{
   
   // compute X-axis local coordinates
   uint64_t p, i;
-  if (m < this->offset_x){
+  if (m < this->cutoff_x){
     // coordinate falls in wider blocks
     auto d = ldiv(m, this->q_x + 1);
     p = d.quot;
     i = d.rem;
   } else{
     // coordinate falls in narrower blocks
-    auto d = ldiv(m - this->offset_x, this->q_x);
+    auto d = ldiv(m - this->cutoff_x, this->q_x);
     p = d.quot + this->r_x;
     i = d.rem;
   }
 
-  // compute X-axis local coordinates
+  // compute Y-axis local coordinates
   uint64_t q, j;
-  if (n < this->offset_y){
-    // coordinate falls in wider blocks
+  if (n < this->cutoff_y){
+    // coordinates fall in wider blocks
     auto d = ldiv(n, this->q_y + 1);
     q = d.quot;
     j = d.rem;
   } else{
-    // coordinate falls in narrower blocks
-    auto d = ldiv(n - this->offset_y, this->q_y);
+    // coordinates fall in narrower blocks
+    auto d = ldiv(n - this->cutoff_y, this->q_y);
     q = d.quot + this->r_y;
     j = d.rem;
   }
 
   // return valid indices
   return {p, q, i, j};
+}
+
+std::array<uint64_t,2> ParallelMesh::
+LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
+  // return invalid values when indices are out of bounds
+  uint64_t p = loc.block[0];
+  uint64_t q = loc.block[1];
+  uint64_t i = loc.local[0];
+  uint64_t j = loc.local[1];
+  if (p < 0 || q < 0 || i < 0 || j < 0 
+      || p >= this->n_blocks_x || q >= this->n_blocks_y)
+    return {static_cast<uint64_t>(-1)};
+
+  // compute X-axis global coordinate
+  uint64_t m;
+  if (p < this->r_x){
+    // return invalid values when local index is out of bounds
+    if (i > this->q_x)
+      return {static_cast<uint64_t>(-1)};
+
+    // coordinate falls in wider blocks
+    m = (this->q_x + 1) * p + i;
+  } else{
+    // return invalid values when local index is out of bounds
+    if (i >= this->q_x)
+      return {static_cast<uint64_t>(-1)};
+
+    // coordinate falls in wider blocks
+    m = this->cutoff_x + this->q_x * (p - this->r_x) + i;
+  }
+  
+  // compute Y-axis global coordinate
+  uint64_t n;
+  if (q < this->r_y){
+    // return invalid values when local index is out of bounds
+    if (j > this->q_y)
+      return {static_cast<uint64_t>(-1)};
+
+    // coordinate falls in wider blocks
+    n = (this->q_y + 1) * q + j;
+  } else{
+    // return invalid values when local index is out of bounds
+    if (j >= this->q_y)
+      return {static_cast<uint64_t>(-1)};
+
+    // coordinate falls in wider blocks
+    n = this->cutoff_y + this->q_y * (q - this->r_y) + j;
+  }
+  
+  // return valid indices
+  return {m, n};
 }
 
 std::string ParallelMesh::
