@@ -5,6 +5,12 @@
 
 #include "mesh_chunk.h"
 
+struct LocalCoordinates
+{
+  uint64_t block[2];
+  uint64_t local[2];
+};
+
 class ParallelMesh
 {
   public:
@@ -22,6 +28,9 @@ class ParallelMesh
     double get_cell_size() const { return this->h; }
     std::array<double,2> get_origin() const {return this->origin; }
 
+    // global to local indexing converters
+    LocalCoordinates GlobalToLocalCellIndices(uint64_t, uint64_t) const;
+
     // writer to VTK files
     std::string write_vtm(const std::string&) const;
 
@@ -38,6 +47,8 @@ class ParallelMesh
     uint64_t q_y;
     uint64_t r_x;
     uint64_t r_y;
+    uint64_t offset_x;
+    uint64_t offset_y;
 
     // physical cell size
     double h = 1.;

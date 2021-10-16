@@ -10,7 +10,8 @@
 #include <vtkMultiBlockDataSet.h>
 #include <vtkXMLMultiBlockDataWriter.h>
 
-ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
+ParallelMesh::
+ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 			   uint16_t n_p, uint16_t n_q,
 			   double o_x, double o_y)
   : n_cells_x(n_x)
@@ -23,6 +24,10 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
   , q_y (n_y / n_q)
   , r_x (n_x % n_p)
   , r_y (n_y % n_q){
+
+  // Compute fixed offset depending on Euclidean quotients
+  this->offset_x = this->r_x * (this->q_x + 1);
+  this->offset_y = this->r_y * (this->q_y + 1);
 
   // iterate over row (Y) major over mesh chunks
   for (uint64_t q = 0; q < n_q; q++){
@@ -86,7 +91,46 @@ ParallelMesh::ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
   } // q
 }
 
-std::string ParallelMesh::write_vtm(const std::string& file_name) const{
+LocalCoordinates ParallelMesh::
+GlobalToLocalCellIndices(uint64_t m, uint64_t n) const{
+  // return invalid values when global coordinates are out of bounds
+  if (m < 0 || m >= this->n_cells_x || n < 0 || n >= this->n_cells_y)
+    return {static_cast<uint64_t>(-1)};
+  
+  // compute X-axis local coordinates
+  uint64_t p, i;
+  if (m < this->offset_x){
+    // coordinate falls in wider blocks
+    auto d = ldiv(m, this->q_x + 1);
+    p = d.quot;
+    i = d.rem;
+  } else{
+    // coordinate falls in narrower blocks
+    auto d = ldiv(m - this->offset_x, this->q_x);
+    p = d.quot + this->r_x;
+    i = d.rem;
+  }
+
+  // compute X-axis local coordinates
+  uint64_t q, j;
+  if (n < this->offset_y){
+    // coordinate falls in wider blocks
+    auto d = ldiv(n, this->q_y + 1);
+    q = d.quot;
+    j = d.rem;
+  } else{
+    // coordinate falls in narrower blocks
+    auto d = ldiv(n - this->offset_y, this->q_y);
+    q = d.quot + this->r_y;
+    j = d.rem;
+  }
+
+  // return valid indices
+  return {p, q, i, j};
+}
+
+std::string ParallelMesh::
+write_vtm(const std::string& file_name) const{
   // assemble full file name with extension
   std::string full_file_name = file_name + ".vtm";
 

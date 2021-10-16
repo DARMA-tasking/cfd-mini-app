@@ -31,7 +31,30 @@ int main(int argc, char** argv) {
 	    << n_cells * n_cells << "\n\n";
 
   // create parallel mesh
-  ParallelMesh p_mesh(n_cells, n_cells, 1. / n_cells, 3, 2);
+  uint64_t n_p = 3;
+  uint64_t n_q = 2;
+  ParallelMesh p_mesh(n_cells, n_cells, 1. / n_cells, n_p, n_q);
+  std::map<std::array<uint64_t,2>, uint64_t> block_counts = {};
+  for (uint64_t n = 0; n < n_cells; n++)
+    for (uint64_t m = 0; m < n_cells; m++){
+      LocalCoordinates loc = p_mesh.GlobalToLocalCellIndices(m, n);
+      block_counts[{loc.block[0], loc.block[1]}] ++;
+    }
+  std::cout << "Mesh block counts in "
+	    << n_p << " x " << n_q
+	    << " partition of "
+	    << n_cells << "x" << n_cells
+	    << " parallel mesh:\n";
+  uint64_t c_total = 0;
+  for (const auto& it_block_counts : block_counts){
+    auto n_in_block = it_block_counts.second;
+    c_total += n_in_block;
+    std:: cout << "  block ( "
+	       << it_block_counts.first[0] << " ; "
+	       << it_block_counts.first[1] << " ): "
+	       << n_in_block << "\n";
+  }
+  std::cout << "  grand total: " << c_total << "\n\n";
 
   // create mesh
   std::map<PointIndexEnum, PointTypeEnum> point_types = {

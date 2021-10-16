@@ -12,7 +12,8 @@
 #include <vtkSmartPointer.h>
 #include <vtkXMLImageDataWriter.h>
 
-MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
+MeshChunk::
+MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
 		     const std::map<PointIndexEnum, PointTypeEnum>& point_types,
 		     double o_x, double o_y)
   : n_cells_x(n_x)
@@ -62,84 +63,90 @@ MeshChunk::MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
   }
 }
 
-std::array<uint64_t,2> MeshChunk::index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const{
-  if (k < 0 || k >= nmax){
-  // Return invalid values when index is out of bounds
+std::array<uint64_t,2> MeshChunk::
+index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const{
+  // Return invalid value when index is out of bounds
+  if (k < 0 || k >= nmax)
     return  {(uint64_t) -1, (uint64_t) -1};
-  } else{
+  else{
     std::ldiv_t dv = std::ldiv(k, n);
     return {(uint64_t) dv.rem, (uint64_t) dv.quot};
   }
 }
 
-uint64_t MeshChunk::Cartesian_to_index(uint64_t i, uint64_t j, uint64_t ni, uint64_t nj) const{
-  if(i<0 || i>=ni || j<0 || j>=nj){
-    // Return invalid value when coordinates are out of bounds
+uint64_t MeshChunk::
+Cartesian_to_index(uint64_t i, uint64_t j, uint64_t ni, uint64_t nj) const{
+  // Return invalid value when coordinates are out of bounds
+  if(i<0 || i>=ni || j<0 || j>=nj)
     return -1;
-  } else{
+  else
     return j * ni + i;
-  }
 }
 
-void MeshChunk::set_point_type(uint64_t i, uint64_t j, PointTypeEnum t){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+void MeshChunk::
+set_point_type(uint64_t i, uint64_t j, PointTypeEnum t){
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
     this->point_type(i, j) = t;
-  }
 }
 
-PointTypeEnum MeshChunk::get_point_type(uint64_t i, uint64_t j) const{
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+PointTypeEnum MeshChunk::
+get_point_type(uint64_t i, uint64_t j) const{
+  // Return invalid type when indices are out of bounds
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
     return this->point_type(i, j);
-  } else{
+  else
     return PointTypeEnum::INVALID;
-  }
 }
 
-void MeshChunk::set_velocity_x(uint64_t i, uint64_t j, double u){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+void MeshChunk::
+set_velocity_x(uint64_t i, uint64_t j, double u){
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
     this->velocity(i, j, 0) = u;
-  }
 }
 
-void MeshChunk::set_velocity_y(uint64_t i, uint64_t j, double v){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+void MeshChunk::
+set_velocity_y(uint64_t i, uint64_t j, double v){
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
     this->velocity(i, j, 1) = v;
-  }
 }
 
-double MeshChunk::get_velocity_x(uint64_t i, uint64_t j) const{
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+double MeshChunk::
+get_velocity_x(uint64_t i, uint64_t j) const{
+  // Return invalid velocity when indices are out of bounds
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
     return this->velocity(i, j, 0);
-  } else{
+  else
     return std::nan("");
-  }
 }
 
-double MeshChunk::get_velocity_y(uint64_t i, uint64_t j) const{
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+double MeshChunk::
+get_velocity_y(uint64_t i, uint64_t j) const{
+  // Return invalid velocity when indices are out of bounds
+  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
     return this->velocity(i, j, 1);
-  } else{
+  else
     return std::nan("");
-  }
 }
 
-void MeshChunk::set_pressure(uint64_t i, uint64_t j, double scalar){
+void MeshChunk::
+set_pressure(uint64_t i, uint64_t j, double scalar){
   uint64_t k = this->Cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
-  if(k != -1){
+  if(k != -1)
     this->pressure(k) = scalar;
-  }
 }
 
-double MeshChunk::get_pressure(uint64_t i, uint64_t j) const{
+double MeshChunk::
+get_pressure(uint64_t i, uint64_t j) const{
+  // Return invalid mesh chunk when indices are out of bounds
   uint64_t k = this->Cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
-  if(k == -1){
+  if(k == -1)
     return std::nan("");
-  } else{
+  else
     return this->pressure(k);
-  }
 }
 
-vtkSmartPointer<vtkUniformGrid> MeshChunk::make_VTK_uniform_grid() const{
+vtkSmartPointer<vtkUniformGrid> MeshChunk::
+make_VTK_uniform_grid() const{
   // instantiate VTK uniform grid from mesh chunk parameters
   vtkSmartPointer<vtkUniformGrid> ug = vtkSmartPointer<vtkUniformGrid>::New();
   uint64_t n_c_x = this->n_cells_x;
@@ -187,7 +194,8 @@ vtkSmartPointer<vtkUniformGrid> MeshChunk::make_VTK_uniform_grid() const{
   return ug;
 }
 
-std::string MeshChunk::write_vti(const std::string& file_name) const{
+std::string MeshChunk::
+write_vti(const std::string& file_name) const{
   // assemble full file name with extension
   std::string full_file_name = file_name + ".vti";
 
