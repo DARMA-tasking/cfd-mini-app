@@ -10,6 +10,8 @@
 #include <vtkMultiBlockDataSet.h>
 #include <vtkXMLMultiBlockDataWriter.h>
 
+const uint64_t uint64_nan = static_cast<uint64_t>(-1);
+
 ParallelMesh::
 ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 			   uint16_t n_p, uint16_t n_q,
@@ -96,7 +98,7 @@ GlobalToLocalCellIndices(uint64_t m, uint64_t n) const{
   // return invalid values when global coordinates are out of bounds
   if (m < 0 || m >= this->n_cells_x
       || n < 0 || n >= this->n_cells_y)
-    return {static_cast<uint64_t>(-1)};
+    return {uint64_nan, uint64_nan, uint64_nan, uint64_nan};
   
   // compute X-axis local coordinates
   uint64_t p, i;
@@ -135,9 +137,24 @@ GlobalToLocalPointIndices(uint64_t m, uint64_t n) const{
   // return invalid values when global coordinates are out of bounds
   if (m < 0 || m >= this->get_n_points_x()
       || n < 0 || n >= this->get_n_points_y())
-    return {static_cast<uint64_t>(-1)};
+    return {uint64_nan, uint64_nan, uint64_nan, uint64_nan};
 
-  return {static_cast<uint64_t>(-1)};
+  // return early for global mesh origin case
+  if (m == 0 && n == 0)
+    return {0, 0, 0, 0};
+
+  // bottom left cell ownership of point when available
+  uint64_t m_c =  (m == 0) ? 0 : m - 1;
+  uint64_t n_c =  (n == 0) ? 0 : n - 1;
+  LocalCoordinates loc_c = this->GlobalToLocalCellIndices(m_c, n_c);
+
+  // return valid indices
+  return {
+    loc_c.block[0],
+    loc_c.block[1],
+    (m == 0) ? 0 : loc_c.local[0] + 1,
+    (n == 0) ? 0 : loc_c.local[1] + 1
+  };
 }
 
 std::array<uint64_t,2> ParallelMesh::
@@ -149,21 +166,21 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
   uint64_t j = loc.local[1];
   if (p < 0 || q < 0 || i < 0 || j < 0 
       || p >= this->n_blocks_x || q >= this->n_blocks_y)
-    return {static_cast<uint64_t>(-1)};
+    return {uint64_nan, uint64_nan};
 
   // compute X-axis global coordinate
   uint64_t m;
   if (p < this->r_x){
     // return invalid values when local index is out of bounds
     if (i > this->q_x)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in wider blocks
     m = (this->q_x + 1) * p + i;
   } else{
     // return invalid values when local index is out of bounds
     if (i >= this->q_x)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in narrower blocks
     m = this->cutoff_x + this->q_x * (p - this->r_x) + i;
@@ -174,14 +191,14 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
   if (q < this->r_y){
     // return invalid values when local index is out of bounds
     if (j > this->q_y)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in wider blocks
     n = (this->q_y + 1) * q + j;
   } else{
     // return invalid values when local index is out of bounds
     if (j >= this->q_y)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in narrower blocks
     n = this->cutoff_y + this->q_y * (q - this->r_y) + j;
@@ -200,21 +217,21 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
   uint64_t j = loc.local[1];
   if (p < 0 || q < 0 || i < 0 || j < 0 
       || p >= this->n_blocks_x || q >= this->n_blocks_y)
-    return {static_cast<uint64_t>(-1)};
+    return {uint64_nan, uint64_nan};
 
   // compute X-axis global coordinate
   uint64_t m;
   if (p < this->r_x){
     // return invalid values when local index is out of bounds
     if (i > this->q_x + 1)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in wider blocks
     m = (this->q_x + 1) * p + i;
   } else{
     // return invalid values when local index is out of bounds
     if (i > this->q_x)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in narrower blocks
     m = this->cutoff_x + this->q_x * (p - this->r_x) + i;
@@ -225,14 +242,14 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
   if (q < this->r_y){
     // return invalid values when local index is out of bounds
     if (j > this->q_y + 1)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in wider blocks
     n = (this->q_y + 1) * q + j;
   } else{
     // return invalid values when local index is out of bounds
     if (j > this->q_y)
-      return {static_cast<uint64_t>(-1)};
+      return {uint64_nan, uint64_nan};
 
     // coordinate falls in narrower blocks
     n = this->cutoff_y + this->q_y * (q - this->r_y) + j;
