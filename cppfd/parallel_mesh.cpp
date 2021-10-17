@@ -46,7 +46,7 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 
       // create default mesh chunk boundary point types
       std::map<PointIndexEnum, PointTypeEnum> pt = {
-        {PointIndexEnum::CORNER_0, PointTypeEnum::GHOST},
+	{PointIndexEnum::CORNER_0, PointTypeEnum::GHOST},
 	{PointIndexEnum::CORNER_2, PointTypeEnum::SHARED_OWNED},
 	{PointIndexEnum::CORNER_1, PointTypeEnum::GHOST},
 	{PointIndexEnum::CORNER_3, PointTypeEnum::GHOST},
@@ -81,9 +81,9 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 
       // append new mesh block to existing ones
        this->mesh_chunks.emplace
- 	(std::piecewise_construct,
- 	 std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
- 	 std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
+	(std::piecewise_construct,
+	 std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
+	 std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
 
       // slide horizontal origin rightward
       o_x += m * this->h;
@@ -99,7 +99,7 @@ GlobalToLocalCellIndices(uint64_t m, uint64_t n) const{
   if (m < 0 || m >= this->n_cells_x
       || n < 0 || n >= this->n_cells_y)
     return {uint64_nan, uint64_nan, uint64_nan, uint64_nan};
-  
+
   // compute X-axis local coordinates
   uint64_t p, i;
   if (m < this->cutoff_x){
@@ -164,7 +164,7 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
   uint64_t q = loc.block[1];
   uint64_t i = loc.local[0];
   uint64_t j = loc.local[1];
-  if (p < 0 || q < 0 || i < 0 || j < 0 
+  if (p < 0 || q < 0 || i < 0 || j < 0
       || p >= this->n_blocks_x || q >= this->n_blocks_y)
     return {uint64_nan, uint64_nan};
 
@@ -185,7 +185,7 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
     // coordinate falls in narrower blocks
     m = this->cutoff_x + this->q_x * (p - this->r_x) + i;
   }
-  
+
   // compute Y-axis global coordinate
   uint64_t n;
   if (q < this->r_y){
@@ -203,7 +203,7 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
     // coordinate falls in narrower blocks
     n = this->cutoff_y + this->q_y * (q - this->r_y) + j;
   }
-  
+
   // return valid indices
   return {m, n};
 }
@@ -215,7 +215,7 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
   uint64_t q = loc.block[1];
   uint64_t i = loc.local[0];
   uint64_t j = loc.local[1];
-  if (p < 0 || q < 0 || i < 0 || j < 0 
+  if (p < 0 || q < 0 || i < 0 || j < 0
       || p >= this->n_blocks_x || q >= this->n_blocks_y)
     return {uint64_nan, uint64_nan};
 
@@ -236,7 +236,7 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
     // coordinate falls in narrower blocks
     m = this->cutoff_x + this->q_x * (p - this->r_x) + i;
   }
-  
+
   // compute Y-axis global coordinate
   uint64_t n;
   if (q < this->r_y){
@@ -254,7 +254,7 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
     // coordinate falls in narrower blocks
     n = this->cutoff_y + this->q_y * (q - this->r_y) + j;
   }
-  
+
   // return valid indices
   return {m, n};
 }

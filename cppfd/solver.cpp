@@ -20,7 +20,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   if(this->verbosity >= 1)
     std::cout << "Initial timestep: "
 	      << this->delta_t
-	      << ", " 
+	      << ", "
 	      <<"Final time: "
 	      << this->t_final
 	      << std::endl;
