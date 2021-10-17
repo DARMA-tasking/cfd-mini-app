@@ -10,11 +10,20 @@
 #include <KokkosSparse_gauss_seidel.hpp>
 
 // main function to solve N-S equation on time steps
-void Solver::solve(stopping_point s_p, linear_solver l_s,adaptative_time_step ats){
+void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step ats){
   // begin simulation
-  if(this->verbosity >= 1){
-    std::cout << "Initial timestep : " << this->delta_t << ", " << "Time final : " << this->t_final << std::endl;
-  }
+  std::cout << "in solve: "
+	    << mesh_chunk.get_n_cells_x()
+	    << " "
+	    << mesh_chunk.get_n_cells_y()
+	    << std::endl;
+  if(this->verbosity >= 1)
+    std::cout << "Initial timestep: "
+	      << this->delta_t
+	      << ", " 
+	      <<"Final time: "
+	      << this->t_final
+	      << std::endl;
 
   if(this->verbosity >= 1){
     std::cout << "Applying velocity boundary conditions..." << std::endl;

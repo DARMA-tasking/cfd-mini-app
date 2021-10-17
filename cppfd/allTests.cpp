@@ -9,7 +9,7 @@
 #include "solver.cpp"
 
 struct solver_test : testing::Test{
-  Solver* solver;
+  std::unique_ptr<Solver> solver;
 
   solver_test()
   {
@@ -46,13 +46,15 @@ struct solver_test : testing::Test{
       {"v_right", 0.0}
     };
     BoundaryConditions b_c(mesh, velocity_values);
-    solver = new Solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
+
+    // instantiate solver
+    this->solver = std::make_unique<Solver>(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
   }
 };
 
 TEST_F(solver_test, Laplacian_values_test){
   // run solve routine until Laplacian matrix is generated
-  solver->solve(Solver::stopping_point::AFTER_LAPLACIAN, Solver::linear_solver::NONE, Solver::adaptative_time_step::OFF);
+  this->solver->solve(Solver::stopping_point::AFTER_LAPLACIAN, Solver::linear_solver::NONE, Solver::adaptative_time_step::OFF);
 
   // remap CRS Laplacian into dense matrix for convenience
   int mn = 9;

@@ -14,8 +14,8 @@
 
 MeshChunk::
 MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
-		     const std::map<PointIndexEnum, PointTypeEnum>& point_types,
-		     double o_x, double o_y)
+	  const std::map<PointIndexEnum, PointTypeEnum>& point_types,
+	  double o_x, double o_y)
   : n_cells_x(n_x)
   , n_cells_y(n_y)
   , h(cell_size)

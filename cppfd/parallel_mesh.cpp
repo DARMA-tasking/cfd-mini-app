@@ -80,10 +80,10 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 	  = PointTypeEnum::BOUNDARY;
 
       // append new mesh block to existing ones
-      this->mesh_chunks.emplace
-	(std::piecewise_construct,
-	 std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
-	 std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
+       this->mesh_chunks.emplace
+ 	(std::piecewise_construct,
+ 	 std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
+ 	 std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
 
       // slide horizontal origin rightward
       o_x += m * this->h;

@@ -24,10 +24,8 @@ class Solver
       , rho(r)
       , max_C(m_C)
       , verbosity(v)
-    {
-      // compute and store kinematic viscosity
-      this->nu = d_v / r;
-    }
+      , nu(d_v / r)
+    {}
 
     // provide stopping points for debugging purposes
     enum struct stopping_point: uint8_t{
