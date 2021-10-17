@@ -66,7 +66,7 @@ MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
 std::array<uint64_t,2> MeshChunk::
 index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const{
   // Return invalid value when index is out of bounds
-  if (k < 0 || k >= nmax)
+  if (k >= nmax)
     return  {(uint64_t) -1, (uint64_t) -1};
   else{
     std::ldiv_t dv = std::ldiv(k, n);
@@ -77,7 +77,7 @@ index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const{
 uint64_t MeshChunk::
 Cartesian_to_index(uint64_t i, uint64_t j, uint64_t ni, uint64_t nj) const{
   // Return invalid value when coordinates are out of bounds
-  if(i<0 || i>=ni || j<0 || j>=nj)
+  if(i >= ni || j >= nj)
     return -1;
   else
     return j * ni + i;
@@ -85,14 +85,14 @@ Cartesian_to_index(uint64_t i, uint64_t j, uint64_t ni, uint64_t nj) const{
 
 void MeshChunk::
 set_point_type(uint64_t i, uint64_t j, PointTypeEnum t){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     this->point_type(i, j) = t;
 }
 
 PointTypeEnum MeshChunk::
 get_point_type(uint64_t i, uint64_t j) const{
   // Return invalid type when indices are out of bounds
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     return this->point_type(i, j);
   else
     return PointTypeEnum::INVALID;
@@ -100,20 +100,20 @@ get_point_type(uint64_t i, uint64_t j) const{
 
 void MeshChunk::
 set_velocity_x(uint64_t i, uint64_t j, double u){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     this->velocity(i, j, 0) = u;
 }
 
 void MeshChunk::
 set_velocity_y(uint64_t i, uint64_t j, double v){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     this->velocity(i, j, 1) = v;
 }
 
 double MeshChunk::
 get_velocity_x(uint64_t i, uint64_t j) const{
   // Return invalid velocity when indices are out of bounds
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     return this->velocity(i, j, 0);
   else
     return std::nan("");
@@ -122,7 +122,7 @@ get_velocity_x(uint64_t i, uint64_t j) const{
 double MeshChunk::
 get_velocity_y(uint64_t i, uint64_t j) const{
   // Return invalid velocity when indices are out of bounds
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y())
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     return this->velocity(i, j, 1);
   else
     return std::nan("");
@@ -168,8 +168,8 @@ make_VTK_uniform_grid() const{
   point_data->SetNumberOfComponents(3);
   point_data->SetName("Velocity");
   point_data->SetNumberOfTuples(n_p_x * n_p_y);
-  for(uint64_t  j = 0; j < n_p_y; j++){
-    for(uint64_t  i = 0; i < n_p_x; i++){
+  for(uint64_t j = 0; j < n_p_y; j++){
+    for(uint64_t i = 0; i < n_p_x; i++){
       point_type->SetTuple1(j * n_p_x + i, static_cast<int>(this->point_type(i, j)));
       point_data->SetTuple3(j * n_p_x + i, this->velocity(i, j, 0), this->velocity(i, j, 1), 0);
     }
