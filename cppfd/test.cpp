@@ -28,7 +28,7 @@ int main(int argc, char** argv) {
 	    << "\n  initial time-step: " << delta_t
 	    << "\n  final time: " << t_final
 	    << "\n  max_C: " << max_C << "\n";
-  uint64_t n_cells = n_c_x * n_c_y;  
+  uint64_t n_cells = n_c_x * n_c_y;
   double cell_size = 1. / sqrt(n_c_x * n_c_y);
   std::cout << "Derived parameters:"
 	    << "\n  number of cells: " << n_c_x << "x" << n_c_y
@@ -129,7 +129,7 @@ int main(int argc, char** argv) {
 	    << std::endl;
   std::cout << "  global -> local -> global point coordinates mismatches: "
 	    << p_mismatch << "\n\n";
-  
+
   // create mesh
   std::map<PointIndexEnum, PointTypeEnum> point_types = {
     {PointIndexEnum::CORNER_0, PointTypeEnum::BOUNDARY},
