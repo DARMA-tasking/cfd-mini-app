@@ -1,6 +1,7 @@
 #include <iostream>
 #include <array>
 #include <map>
+#include <cmath>
 
 #include <Kokkos_Core.hpp>
 
@@ -21,20 +22,23 @@ int main(int argc, char** argv) {
   double max_C = 0.5;
   uint64_t n_c_x = 35;
   uint64_t n_c_y = 35;
-  uint64_t n_cells = n_c_x * n_c_y;
   std::cout << "Input parameters:"
 	    << "\n  density: " << density
-	    << "\n  dynamic_viscosity: " << dynamic_viscosity
-	    << "\n  delta_t: " << delta_t
-	    << "\n  t_final: " << t_final
-	    << "\n  max_C: " << max_C
-	    << "\n  n_cells: " << n_c_x << "x" << n_c_y
-	    << " = " << n_cells << "\n\n";
+	    << "\n  dynamic viscosity: " << dynamic_viscosity
+	    << "\n  initial time-step: " << delta_t
+	    << "\n  final time: " << t_final
+	    << "\n  max_C: " << max_C << "\n";
+  uint64_t n_cells = n_c_x * n_c_y;  
+  double cell_size = 1. / sqrt(n_c_x * n_c_y);
+  std::cout << "Derived parameters:"
+	    << "\n  number of cells: " << n_c_x << "x" << n_c_y
+	    << " = " << n_cells
+	    << "\n  cell size: " << cell_size << "\n\n";
 
   // create parallel mesh
   uint64_t n_p = 3;
   uint64_t n_q = 2;
-  ParallelMesh p_mesh(n_c_x, n_c_y, 1. / n_c_x, n_p, n_q);
+  ParallelMesh p_mesh(n_c_x, n_c_y, cell_size , n_p, n_q);
 
   // check partition of cells
   std::map<std::array<uint64_t,2>, uint64_t> c_per_block = {};
@@ -137,7 +141,7 @@ int main(int argc, char** argv) {
     {PointIndexEnum::EDGE_2, PointTypeEnum::BOUNDARY},
     {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
   };
-  MeshChunk mesh(n_c_x, n_c_y, 1. / n_c_x, point_types);
+  MeshChunk mesh(n_c_x, n_c_y, cell_size, point_types);
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {
