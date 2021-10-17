@@ -94,7 +94,8 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 LocalCoordinates ParallelMesh::
 GlobalToLocalCellIndices(uint64_t m, uint64_t n) const{
   // return invalid values when global coordinates are out of bounds
-  if (m < 0 || m >= this->n_cells_x || n < 0 || n >= this->n_cells_y)
+  if (m < 0 || m >= this->n_cells_x
+      || n < 0 || n >= this->n_cells_y)
     return {static_cast<uint64_t>(-1)};
   
   // compute X-axis local coordinates
@@ -129,6 +130,16 @@ GlobalToLocalCellIndices(uint64_t m, uint64_t n) const{
   return {p, q, i, j};
 }
 
+LocalCoordinates ParallelMesh::
+GlobalToLocalPointIndices(uint64_t m, uint64_t n) const{
+  // return invalid values when global coordinates are out of bounds
+  if (m < 0 || m >= this->get_n_points_x()
+      || n < 0 || n >= this->get_n_points_y())
+    return {static_cast<uint64_t>(-1)};
+
+  return {static_cast<uint64_t>(-1)};
+}
+
 std::array<uint64_t,2> ParallelMesh::
 LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
   // return invalid values when indices are out of bounds
@@ -154,7 +165,7 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
     if (i >= this->q_x)
       return {static_cast<uint64_t>(-1)};
 
-    // coordinate falls in wider blocks
+    // coordinate falls in narrower blocks
     m = this->cutoff_x + this->q_x * (p - this->r_x) + i;
   }
   
@@ -172,7 +183,58 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
     if (j >= this->q_y)
       return {static_cast<uint64_t>(-1)};
 
+    // coordinate falls in narrower blocks
+    n = this->cutoff_y + this->q_y * (q - this->r_y) + j;
+  }
+  
+  // return valid indices
+  return {m, n};
+}
+
+std::array<uint64_t,2> ParallelMesh::
+LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
+  // return invalid values when indices are out of bounds
+  uint64_t p = loc.block[0];
+  uint64_t q = loc.block[1];
+  uint64_t i = loc.local[0];
+  uint64_t j = loc.local[1];
+  if (p < 0 || q < 0 || i < 0 || j < 0 
+      || p >= this->n_blocks_x || q >= this->n_blocks_y)
+    return {static_cast<uint64_t>(-1)};
+
+  // compute X-axis global coordinate
+  uint64_t m;
+  if (p < this->r_x){
+    // return invalid values when local index is out of bounds
+    if (i > this->q_x + 1)
+      return {static_cast<uint64_t>(-1)};
+
     // coordinate falls in wider blocks
+    m = (this->q_x + 1) * p + i;
+  } else{
+    // return invalid values when local index is out of bounds
+    if (i > this->q_x)
+      return {static_cast<uint64_t>(-1)};
+
+    // coordinate falls in narrower blocks
+    m = this->cutoff_x + this->q_x * (p - this->r_x) + i;
+  }
+  
+  // compute Y-axis global coordinate
+  uint64_t n;
+  if (q < this->r_y){
+    // return invalid values when local index is out of bounds
+    if (j > this->q_y + 1)
+      return {static_cast<uint64_t>(-1)};
+
+    // coordinate falls in wider blocks
+    n = (this->q_y + 1) * q + j;
+  } else{
+    // return invalid values when local index is out of bounds
+    if (j > this->q_y)
+      return {static_cast<uint64_t>(-1)};
+
+    // coordinate falls in narrower blocks
     n = this->cutoff_y + this->q_y * (q - this->r_y) + j;
   }
   

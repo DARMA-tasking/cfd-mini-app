@@ -30,7 +30,11 @@ class ParallelMesh
 
     // global to local indexing converters
     LocalCoordinates GlobalToLocalCellIndices(uint64_t, uint64_t) const;
+    LocalCoordinates GlobalToLocalPointIndices(uint64_t, uint64_t) const;
+
+    // local to global indexing converters
     std::array<uint64_t,2> LocalToGlobalCellIndices(const LocalCoordinates&) const;
+    std::array<uint64_t,2> LocalToGlobalPointIndices(const LocalCoordinates&) const;
 
     // writer to VTK files
     std::string write_vtm(const std::string&) const;

@@ -35,17 +35,22 @@ int main(int argc, char** argv) {
   uint64_t n_q = 2;
   ParallelMesh p_mesh(n_cells, n_cells, 1. / n_cells, n_p, n_q);
   std::map<std::array<uint64_t,2>, uint64_t> block_counts = {};
+  uint64_t mismatches = 0;
   for (uint64_t n = 0; n < n_cells; n++)
     for (uint64_t m = 0; m < n_cells; m++){
       LocalCoordinates loc = p_mesh.GlobalToLocalCellIndices(m, n);
       block_counts[{loc.block[0], loc.block[1]}] ++;
       auto g = p_mesh.LocalToGlobalCellIndices(loc);
-      if (m != g[0])
+      if (m != g[0]){
+	mismatches ++;
 	std::cout << "** ERROR: "
 		  << m << " != " << g[0] << "\n";
-      if (n != g[1])
+      }
+      if (n != g[1]){
+	mismatches ++;
 	std::cout << "** ERROR: "
 		  << n << " != " << g[1] << "\n";
+      }
     }
   std::cout << "Mesh block counts in "
 	    << n_p << " x " << n_q
@@ -61,7 +66,9 @@ int main(int argc, char** argv) {
 	       << it_block_counts.first[1] << " ): "
 	       << n_in_block << "\n";
   }
-  std::cout << "  grand total: " << c_total << "\n\n";
+  std::cout << "  grand total: " << c_total << "\n";
+  std::cout << "  global -> local -> global coordinates mismatches: "
+	    << mismatches << "\n\n";
 
   // create mesh
   std::map<PointIndexEnum, PointTypeEnum> point_types = {
