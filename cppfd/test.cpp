@@ -163,18 +163,18 @@ int main(int argc, char** argv) {
 
   // save results
   std::string file_name = mesh->write_vti("test");
-  std::cout<< std::endl
-	   << "Created VTK structured grid file: \""
-	   << file_name<<"\""
-	   << std::endl;
+  std::cout << std::endl
+	    << "Created VTK structured grid file: \""
+	    << file_name<<"\""
+	    << std::endl;
 
   file_name = p_mesh.write_vtm("p_test");
-  std::cout<< std::endl
-	   << "Created VTK multi-block mesh file: \""
-	   << file_name<<"\""
-	   << std::endl;
+  std::cout << std::endl
+	    << "Created VTK multi-block mesh file: \""
+	    << file_name<<"\""
+	    << std::endl;
 
   // terminate cleanly
-  std::cout<< std::endl;
+  std::cout << std::endl;
   return 0;
 }
