@@ -16,7 +16,7 @@
 class Solver
 {
   public:
-    Solver(MeshChunk& m, BoundaryConditions& b_c, double d_t, double t_f, double r, double d_v, double m_C, int v)
+  Solver(std::shared_ptr<MeshChunk> m, BoundaryConditions& b_c, double d_t, double t_f, double r, double d_v, double m_C, int v)
       : mesh_chunk(m)
       , boundary_conditions(b_c)
       , delta_t(d_t)
@@ -98,7 +98,7 @@ class Solver
     double compute_global_courant_number();
 
     // reference to mesh onto which solve is performed
-    MeshChunk& mesh_chunk;
+    std::shared_ptr<MeshChunk> mesh_chunk;
 
     // store Kokkos kernels zero and unit values
     double zero = Kokkos::ArithTraits<double>::zero();

@@ -141,7 +141,8 @@ int main(int argc, char** argv) {
     {PointIndexEnum::EDGE_2, PointTypeEnum::BOUNDARY},
     {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
   };
-  MeshChunk mesh(n_c_x, n_c_y, cell_size, point_types);
+  auto mesh = std::make_shared<MeshChunk>
+    (n_c_x, n_c_y, cell_size, point_types);
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {
@@ -161,7 +162,7 @@ int main(int argc, char** argv) {
   solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
   // save results
-  std::string file_name = mesh.write_vti("test");
+  std::string file_name = mesh->write_vti("test");
   std::cout<< std::endl
 	   << "Created VTK structured grid file: \""
 	   << file_name<<"\""

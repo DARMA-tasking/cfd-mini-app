@@ -32,7 +32,8 @@ struct solver_test : testing::Test{
       {PointIndexEnum::EDGE_2, PointTypeEnum::BOUNDARY},
       {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
     };
-    MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
+    auto mesh = std::make_shared<MeshChunk>
+      (n_cells, n_cells, 1. / n_cells, point_types);
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {
@@ -48,7 +49,8 @@ struct solver_test : testing::Test{
     BoundaryConditions b_c(mesh, velocity_values);
 
     // instantiate solver
-    this->solver = std::make_unique<Solver>(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
+    this->solver = std::make_unique<Solver>
+      (mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
   }
 };
 
