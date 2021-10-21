@@ -2,7 +2,6 @@
 
 #include <iostream>
 #include <array>
-#include <cmath>
 #include <Kokkos_Core.hpp>
 
 #include <vtkDoubleArray.h>
@@ -10,18 +9,17 @@
 #include <vtkCellData.h>
 #include <vtkPointData.h>
 #include <vtkUniformGrid.h>
+#include <vtkSmartPointer.h>
 #include <vtkXMLImageDataWriter.h>
-#include <vtkXMLImageDataReader.h>
 
-
-MeshChunk::MeshChunk(int n_x, int n_y, double cell_size,
-		     std::map<std::string, PointTypeEnum> point_types){
-
-  // set instance variables
-  this->n_cells_x = n_x;
-  this->n_cells_y = n_y;
-  this->origin = {0, 0};
-  this->h = cell_size;
+MeshChunk::
+MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
+	  const std::map<PointIndexEnum, PointTypeEnum>& point_types,
+	  double o_x, double o_y)
+  : n_cells_x(n_x)
+  , n_cells_y(n_y)
+  , h(cell_size)
+  , origin({o_x, o_y}){
 
   // instantiate internal containers
   this->point_type = Kokkos::
@@ -34,163 +32,180 @@ MeshChunk::MeshChunk(int n_x, int n_y, double cell_size,
   // set boundary point types
   for (const auto& kv : point_types){
     // interior points
-    if (kv.first == "i")
+    if (kv.first == PointIndexEnum::INTERIOR)
       for(uint64_t j = 1; j < n_y; j++)
 	for(uint64_t i = 1; i < n_x; i++)
 	  this->point_type(i, j) = kv.second;
 
-    // non-corner edge points
-    else if (kv.first == "b")
+    // non-corner edge points in QUAD8 order
+    else if (kv.first == PointIndexEnum::EDGE_0)
       for(uint64_t i = 1; i < n_x; i++)
 	this->point_type(i, 0) = kv.second;
-    else if (kv.first == "t")
-      for(uint64_t i = 1; i < n_x; i++)
-	this->point_type(i, n_y) = kv.second;
-    else if (kv.first == "l")
-      for(uint64_t j = 1; j < n_y; j++)
-	this->point_type(0, j) = kv.second;
-    else if (kv.first == "r")
+    else if (kv.first == PointIndexEnum::EDGE_1)
       for(uint64_t j = 1; j < n_y; j++)
 	this->point_type(n_x, j) = kv.second;
+    else if (kv.first == PointIndexEnum::EDGE_2)
+      for(uint64_t i = 1; i < n_x; i++)
+	this->point_type(i, n_y) = kv.second;
+    else if (kv.first == PointIndexEnum::EDGE_3)
+      for(uint64_t j = 1; j < n_y; j++)
+	this->point_type(0, j) = kv.second;
 
-    // corner points
-    else if (kv.first == "bl")
+    // corner points in QUAD4 order
+    else if (kv.first == PointIndexEnum::CORNER_0)
       this->point_type(0, 0) = kv.second;
-    else if (kv.first == "br")
+    else if (kv.first == PointIndexEnum::CORNER_1)
       this->point_type(n_x, 0) = kv.second;
-    else if (kv.first == "tl")
-      this->point_type(0, n_y) = kv.second;
-    else if (kv.first == "tr")
+    else if (kv.first == PointIndexEnum::CORNER_2)
       this->point_type(n_x, n_y) = kv.second;
+    else if (kv.first == PointIndexEnum::CORNER_3)
+      this->point_type(0, n_y) = kv.second;
   }
 }
 
-void MeshChunk::set_origin(double x, double y){
-  this->origin[0] = x;
-  this->origin[1] = y;
-}
-
-std::array<int,2> MeshChunk::index_to_cartesian(int k, int n, int nmax){
-  if (k < 0 || k >= nmax){
-  // Return invalid values when index is out of bounds
-    return  {-1, -1};
-  } else{
-    std::div_t dv = std::div(k, n);
-    return {dv.rem, dv.quot};
+std::array<uint64_t,2> MeshChunk::
+index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const{
+  // Return invalid value when index is out of bounds
+  if (k >= nmax)
+    return  {(uint64_t) -1, (uint64_t) -1};
+  else{
+    std::ldiv_t dv = std::ldiv(k, n);
+    return {(uint64_t) dv.rem, (uint64_t) dv.quot};
   }
 }
 
-int MeshChunk::cartesian_to_index(int i, int j, int ni, int nj){
-  if(i<0 || i>=ni || j<0 || j>=nj){
-    // Return invalid value when coordinates are out of bounds
+uint64_t MeshChunk::
+Cartesian_to_index(uint64_t i, uint64_t j, uint64_t ni, uint64_t nj) const{
+  // Return invalid value when coordinates are out of bounds
+  if(i >= ni || j >= nj)
     return -1;
-  } else{
+  else
     return j * ni + i;
-  }
 }
 
-void MeshChunk::set_point_type(int i, int j, PointTypeEnum t){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+void MeshChunk::
+set_point_type(uint64_t i, uint64_t j, PointTypeEnum t){
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     this->point_type(i, j) = t;
-  }
 }
 
-PointTypeEnum MeshChunk::get_point_type(int i, int j){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+PointTypeEnum MeshChunk::
+get_point_type(uint64_t i, uint64_t j) const{
+  // Return invalid type when indices are out of bounds
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     return this->point_type(i, j);
-  } else{
+  else
     return PointTypeEnum::INVALID;
-  }
 }
 
-void MeshChunk::set_velocity_x(int i, int j, double u){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+void MeshChunk::
+set_velocity_x(uint64_t i, uint64_t j, double u){
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     this->velocity(i, j, 0) = u;
-  }
 }
 
-void MeshChunk::set_velocity_y(int i, int j, double v){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+void MeshChunk::
+set_velocity_y(uint64_t i, uint64_t j, double v){
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     this->velocity(i, j, 1) = v;
-  }
 }
 
-double MeshChunk::get_velocity_x(int i, int j){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+double MeshChunk::
+get_velocity_x(uint64_t i, uint64_t j) const{
+  // Return invalid velocity when indices are out of bounds
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     return this->velocity(i, j, 0);
-  } else{
+  else
     return std::nan("");
-  }
 }
 
-double MeshChunk::get_velocity_y(int i, int j){
-  if(i > -1 && i < this->get_n_points_x() && j > -1 && j < this->get_n_points_y()){
+double MeshChunk::
+get_velocity_y(uint64_t i, uint64_t j) const{
+  // Return invalid velocity when indices are out of bounds
+  if(i < this->get_n_points_x() && j < this->get_n_points_y())
     return this->velocity(i, j, 1);
-  } else{
+  else
     return std::nan("");
-  }
 }
 
-void MeshChunk::set_pressure(int i, int j, double scalar){
-  int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
-  if(k != -1){
+void MeshChunk::
+set_pressure(uint64_t i, uint64_t j, double scalar){
+  uint64_t k = this->Cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
+  if(k != -1)
     this->pressure(k) = scalar;
-  }
 }
 
-double MeshChunk::get_pressure(int i, int j){
-  int k = this->cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
-  if(k == -1){
+double MeshChunk::
+get_pressure(uint64_t i, uint64_t j) const{
+  // Return invalid mesh chunk when indices are out of bounds
+  uint64_t k = this->Cartesian_to_index(i, j, this->n_cells_x, this->n_cells_y);
+  if(k == -1)
     return std::nan("");
-  } else{
+  else
     return this->pressure(k);
-  }
 }
 
-void MeshChunk::write_vtk(std::string file_name){
-  vtkNew<vtkUniformGrid> ug;
-  uint64_t nx = this->n_cells_x;
-  uint64_t ny = this->n_cells_y;
-  ug->SetDimensions(nx + 1, ny + 1, 1);
-  ug->SetOrigin(this->origin[0], this->origin[0], 0);
+vtkSmartPointer<vtkUniformGrid> MeshChunk::
+make_VTK_uniform_grid() const{
+  // instantiate VTK uniform grid from mesh chunk parameters
+  vtkSmartPointer<vtkUniformGrid> ug = vtkSmartPointer<vtkUniformGrid>::New();
+  uint64_t n_c_x = this->n_cells_x;
+  uint64_t n_c_y = this->n_cells_y;
+  uint64_t n_p_x = n_c_x + 1;
+  uint64_t n_p_y = n_c_y + 1;
+  ug->SetDimensions(n_p_x, n_p_y, 1);
+  ug->SetOrigin(this->origin[0], this->origin[1], 0);
   ug->SetSpacing(this->h, this->h, 0);
 
   // create point centered type and velocity fields
-  vtkNew<vtkIntArray> point_type;
-  vtkNew<vtkDoubleArray> point_data;
+  vtkSmartPointer<vtkIntArray>
+    point_type = vtkSmartPointer<vtkIntArray>::New();
+  vtkSmartPointer<vtkDoubleArray>
+    point_data = vtkSmartPointer<vtkDoubleArray>::New();
   point_type->SetNumberOfComponents(1);
   point_type->SetName("Type");
-  point_type->SetNumberOfTuples((nx + 1) * (ny + 1));
+  point_type->SetNumberOfTuples(n_p_x * n_p_y);
   point_data->SetNumberOfComponents(3);
   point_data->SetName("Velocity");
-  point_data->SetNumberOfTuples((nx + 1) * (ny + 1));
-  for(int j = 0; j < ny +1; j++){
-    for(int i = 0; i < nx + 1; i++){
-      point_type->SetTuple1(j * (nx + 1) + i, static_cast<int>(this->point_type(i, j)));
-      point_data->SetTuple3(j * (nx + 1) + i, this->velocity(i, j, 0), this->velocity(i, j, 1), 0);
+  point_data->SetNumberOfTuples(n_p_x * n_p_y);
+  for(uint64_t j = 0; j < n_p_y; j++){
+    for(uint64_t i = 0; i < n_p_x; i++){
+      point_type->SetTuple1(j * n_p_x + i, static_cast<int>(this->point_type(i, j)));
+      point_data->SetTuple3(j * n_p_x + i, this->velocity(i, j, 0), this->velocity(i, j, 1), 0);
     }
   }
   ug->GetPointData()->SetScalars(point_type);
   ug->GetPointData()->SetVectors(point_data);
 
   // create cell centered pressure field
-  vtkNew<vtkDoubleArray> cell_data;
+  vtkSmartPointer<vtkDoubleArray>
+    cell_data = vtkSmartPointer<vtkDoubleArray>::New();
   cell_data->SetNumberOfComponents(1);
   cell_data->SetName("Pressure");
-  cell_data->SetNumberOfValues(nx * ny);
-  for(int j = 0; j < ny; j++){
-    for(int i = 0; i < nx; i++){
-      cell_data->SetValue(j*nx + i, this->get_pressure(i,j));
+  cell_data->SetNumberOfValues(n_c_x * n_c_y);
+  for(int j = 0; j < n_c_y; j++){
+    for(int i = 0; i < n_c_x; i++){
+      cell_data->SetValue(j * n_c_x + i, this->get_pressure(i,j));
     }
   }
   ug->GetCellData()->SetScalars(cell_data);
 
-  // write vti visualization file
-  vtkNew<vtkXMLImageDataWriter> output_file;
-  output_file->SetFileName(file_name.c_str());
-  output_file->SetInputData(ug);
+  // return VTK smart pointer to uniform grid
+  return ug;
+}
+
+std::string MeshChunk::
+write_vti(const std::string& file_name) const{
+  // assemble full file name with extension
+  std::string full_file_name = file_name + ".vti";
+
+  // write VTK image data (vti) file
+  vtkSmartPointer<vtkXMLImageDataWriter>
+    output_file = vtkSmartPointer<vtkXMLImageDataWriter>::New();
+  output_file->SetFileName(full_file_name.c_str());
+  output_file->SetInputData(this->make_VTK_uniform_grid());
   output_file->Write();
 
-  std::cout<<std::endl;
-  std::cout<<"Visualization file created: \""<<file_name<<"\""<<std::endl;
+  // return fill name with extension
+  return full_file_name;
 }

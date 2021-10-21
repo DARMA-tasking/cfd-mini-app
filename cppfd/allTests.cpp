@@ -9,7 +9,7 @@
 #include "solver.cpp"
 
 struct solver_test : testing::Test{
-  Solver* solver;
+  std::unique_ptr<Solver> solver;
 
   solver_test()
   {
@@ -22,17 +22,18 @@ struct solver_test : testing::Test{
     uint64_t n_cells = 3;
 
     // create mesh
-    std::map<std::string, PointTypeEnum> point_types = {
-      { "b", PointTypeEnum::BOUNDARY },
-      { "t", PointTypeEnum::BOUNDARY },
-      { "l", PointTypeEnum::BOUNDARY },
-      { "r", PointTypeEnum::BOUNDARY },
-      { "bl", PointTypeEnum::BOUNDARY },
-      { "br", PointTypeEnum::BOUNDARY },
-      { "tl", PointTypeEnum::BOUNDARY },
-      { "tr", PointTypeEnum::BOUNDARY }
+    std::map<PointIndexEnum, PointTypeEnum> point_types = {
+      {PointIndexEnum::CORNER_0, PointTypeEnum::BOUNDARY},
+      {PointIndexEnum::CORNER_1, PointTypeEnum::BOUNDARY},
+      {PointIndexEnum::CORNER_2, PointTypeEnum::BOUNDARY},
+      {PointIndexEnum::CORNER_3, PointTypeEnum::BOUNDARY},
+      {PointIndexEnum::EDGE_0, PointTypeEnum::BOUNDARY},
+      {PointIndexEnum::EDGE_1, PointTypeEnum::BOUNDARY},
+      {PointIndexEnum::EDGE_2, PointTypeEnum::BOUNDARY},
+      {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
     };
-    MeshChunk mesh(n_cells, n_cells, 1. / n_cells, point_types);
+    auto mesh = std::make_shared<MeshChunk>
+      (n_cells, n_cells, 1. / n_cells, point_types);
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {
@@ -46,13 +47,16 @@ struct solver_test : testing::Test{
       {"v_right", 0.0}
     };
     BoundaryConditions b_c(mesh, velocity_values);
-    solver = new Solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
+
+    // instantiate solver
+    this->solver = std::make_unique<Solver>
+      (mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
   }
 };
 
 TEST_F(solver_test, Laplacian_values_test){
   // run solve routine until Laplacian matrix is generated
-  solver->solve(Solver::stopping_point::AFTER_LAPLACIAN, Solver::linear_solver::NONE, Solver::adaptative_time_step::OFF);
+  this->solver->solve(Solver::stopping_point::AFTER_LAPLACIAN, Solver::linear_solver::NONE, Solver::adaptative_time_step::OFF);
 
   // remap CRS Laplacian into dense matrix for convenience
   int mn = 9;

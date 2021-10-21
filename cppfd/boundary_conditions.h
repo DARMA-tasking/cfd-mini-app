@@ -9,7 +9,7 @@
 class BoundaryConditions
 {
   public:
-    BoundaryConditions(MeshChunk& m, std::map<std::string, double> velocity_values)
+  BoundaryConditions(std::shared_ptr<MeshChunk> m, std::map<std::string, double> velocity_values)
       : mesh_chunk(m)
       , v_x_t(velocity_values["v_x_t"])
       , v_y_t(velocity_values["v_y_t"])
@@ -29,7 +29,7 @@ class BoundaryConditions
 
   private:
     // reference to mesh onto which boundary conditions apply
-    MeshChunk& mesh_chunk;
+    std::shared_ptr<MeshChunk> mesh_chunk;
 
     // boundary condition velocity values
     double v_x_t = 0;

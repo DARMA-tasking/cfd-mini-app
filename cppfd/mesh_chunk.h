@@ -1,10 +1,24 @@
 #pragma once
+#include <cstdio>
 #include <array>
 #include <string>
 #include <map>
-#include <cstdio>
 
 #include <Kokkos_Core.hpp>
+
+#include <vtkSmartPointer.h>
+
+enum struct PointIndexEnum : int8_t {
+  CORNER_0 = 0,
+  CORNER_1 = 1,
+  CORNER_2 = 2,
+  CORNER_3 = 3,
+  EDGE_0 = 4,
+  EDGE_1 = 5,
+  EDGE_2 = 6,
+  EDGE_3 = 7,
+  INTERIOR = 8
+};
 
 enum struct PointTypeEnum : int8_t {
   INTERIOR = 0,
@@ -14,43 +28,36 @@ enum struct PointTypeEnum : int8_t {
   INVALID = 4
 };
 
+class vtkUniformGrid;
+
 class MeshChunk
 {
   public:
-    MeshChunk(int n_x, int n_y, double cell_size,
-	      std::map<std::string, PointTypeEnum> point_types);
+    MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
+	      const std::map<PointIndexEnum, PointTypeEnum>& point_types,
+	      double o_x = 0., double o_y = 0.);
 
-    // setter/getter for physical cell size
-    void set_cell_size(double size) { this->h = size; }
-    double get_cell_size() { return this->h; }
-
-    // setter/getter for physical origin member variable
-    void set_origin(double x, double y);
-    std::array<double,2> get_origin() {return this->origin; }
-
-    // setters/getters for number of mesh cells in each dimension
-    void set_n_cells_x(int n_x) { this->n_cells_x = n_x; }
-    void set_n_cells_y(int n_y) { this->n_cells_y = n_y; }
-    int get_n_cells_x() { return this->n_cells_x; }
-    int get_n_cells_y() { return this->n_cells_y; }
-
-    // only getters for number of points which depend on number of cells
-    int get_n_points_x() {return this->n_cells_x + 1; }
-    int get_n_points_y() { return this->n_cells_y + 1; }
+    // only getters for unchangeable mesh characteristics
+    uint64_t get_n_cells_x() const { return this->n_cells_x; }
+    uint64_t get_n_cells_y() const { return this->n_cells_y; }
+    uint64_t get_n_points_x() const { return this->n_cells_x + 1; }
+    uint64_t get_n_points_y() const { return this->n_cells_y + 1; }
+    double get_cell_size() const { return this->h; }
+    std::array<double,2> get_origin() const {return this->origin; }
 
     // coordinate systems converters
-    std::array<int,2> index_to_cartesian(int k, int n, int nmax);
-    int cartesian_to_index(int i, int j, int ni, int nj);
+    std::array<uint64_t,2> index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const;
+    uint64_t Cartesian_to_index(uint64_t i, uint64_t j, uint64_t ni, uint64_t nj) const;
 
     // setters/getters for mesh data
-    void set_point_type(int i, int j, PointTypeEnum t);
-    PointTypeEnum get_point_type(int i, int j);
-    void set_pressure(int i, int j, double scalar);
-    double get_pressure(int i, int j);
-    void set_velocity_x(int i, int j, double u);
-    void set_velocity_y(int i, int j, double v);
-    double get_velocity_x(int i, int j);
-    double get_velocity_y(int i, int j);
+    void set_point_type(uint64_t i, uint64_t j, PointTypeEnum t);
+    PointTypeEnum get_point_type(uint64_t i, uint64_t j) const;
+    void set_pressure(uint64_t i, uint64_t j, double scalar);
+    double get_pressure(uint64_t i, uint64_t j) const;
+    void set_velocity_x(uint64_t i, uint64_t j, double u);
+    void set_velocity_y(uint64_t i, uint64_t j, double v);
+    double get_velocity_x(uint64_t i, uint64_t j) const;
+    double get_velocity_y(uint64_t i, uint64_t j) const;
 
     // setter to assign new mesh point data
     void set_velocity(Kokkos::View<double**[2]> v) { this->velocity = v; }
@@ -58,21 +65,22 @@ class MeshChunk
     // setter to assign new mesh cell data
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
 
-    // VTK visualization file writer
-    void write_vtk(std::string file_name);
+    // converter to VTK uniform grid
+    vtkSmartPointer<vtkUniformGrid> make_VTK_uniform_grid() const;
+
+    // writer to VTK file
+    std::string write_vti(const std::string& file_name) const;
 
   private:
-    // physical origin f the mesh
+    // physical origin of the mesh block
     std::array<double,2> origin;
 
-    // dimension characteristics of the mesh
-    int n_cells_x = 3;
-    int n_cells_y = 3;
-    int n_points = 16;
-    int n_cells = 9;
+    // characteristic dimensions of the mesh
+    uint64_t n_cells_x;
+    uint64_t n_cells_y;
 
     // physical cell size
-    double h = 1;
+    double h = 1.;
 
     // mesh point types
     Kokkos::View<PointTypeEnum**> point_type = {};
