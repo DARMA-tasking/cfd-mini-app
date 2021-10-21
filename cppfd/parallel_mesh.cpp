@@ -14,8 +14,8 @@ const uint64_t uint64_nan = static_cast<uint64_t>(-1);
 
 ParallelMesh::
 ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
-			   uint16_t n_p, uint16_t n_q,
-			   double o_x, double o_y)
+                           uint16_t n_p, uint16_t n_q,
+                           double o_x, double o_y)
   : n_cells_x(n_x)
   , n_cells_y(n_y)
   , n_blocks_x(n_p)
@@ -46,44 +46,44 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 
       // create default mesh chunk boundary point types
       std::map<PointIndexEnum, PointTypeEnum> pt = {
-	{PointIndexEnum::CORNER_0, PointTypeEnum::GHOST},
-	{PointIndexEnum::CORNER_2, PointTypeEnum::SHARED_OWNED},
-	{PointIndexEnum::CORNER_1, PointTypeEnum::GHOST},
-	{PointIndexEnum::CORNER_3, PointTypeEnum::GHOST},
-	{PointIndexEnum::EDGE_0, PointTypeEnum::GHOST},
-	{PointIndexEnum::EDGE_1, PointTypeEnum::SHARED_OWNED},
-	{PointIndexEnum::EDGE_2, PointTypeEnum::SHARED_OWNED},
-	{PointIndexEnum::EDGE_3, PointTypeEnum::GHOST},
-	{PointIndexEnum::INTERIOR, PointTypeEnum::INTERIOR}
+        {PointIndexEnum::CORNER_0, PointTypeEnum::GHOST},
+        {PointIndexEnum::CORNER_2, PointTypeEnum::SHARED_OWNED},
+        {PointIndexEnum::CORNER_1, PointTypeEnum::GHOST},
+        {PointIndexEnum::CORNER_3, PointTypeEnum::GHOST},
+        {PointIndexEnum::EDGE_0, PointTypeEnum::GHOST},
+        {PointIndexEnum::EDGE_1, PointTypeEnum::SHARED_OWNED},
+        {PointIndexEnum::EDGE_2, PointTypeEnum::SHARED_OWNED},
+        {PointIndexEnum::EDGE_3, PointTypeEnum::GHOST},
+        {PointIndexEnum::INTERIOR, PointTypeEnum::INTERIOR}
       };
 
       // override outer boundary point types when applicable
       if (q == 0)
-	pt[PointIndexEnum::EDGE_0]
-	  = pt[PointIndexEnum::CORNER_0]
-	  = pt[PointIndexEnum::CORNER_1]
-	  = PointTypeEnum::BOUNDARY;
+        pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
       if (p == n_p - 1)
-	pt[PointIndexEnum::EDGE_1]
-	  = pt[PointIndexEnum::CORNER_1]
-	  = pt[PointIndexEnum::CORNER_2]
-	  = PointTypeEnum::BOUNDARY;
+        pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
       if (q == n_q - 1)
-	pt[PointIndexEnum::EDGE_2]
-	  = pt[PointIndexEnum::CORNER_2]
-	  = pt[PointIndexEnum::CORNER_3]
-	  = PointTypeEnum::BOUNDARY;
+        pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
       if (p == 0)
-	pt[PointIndexEnum::EDGE_3]
-	  = pt[PointIndexEnum::CORNER_3]
-	  = pt[PointIndexEnum::CORNER_0]
-	  = PointTypeEnum::BOUNDARY;
+        pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
 
       // append new mesh block to existing ones
        this->mesh_chunks.emplace
-	(std::piecewise_construct,
-	 std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
-	 std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
+        (std::piecewise_construct,
+         std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
+         std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
 
       // slide horizontal origin rightward
       o_x += m * this->h;
