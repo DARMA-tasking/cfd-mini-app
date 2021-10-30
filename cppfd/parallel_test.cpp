@@ -5,6 +5,7 @@
 
 #include <Kokkos_Core.hpp>
 
+#include "mesh_chunk.cpp"
 #include "parallel_mesh.cpp"
 #include "boundary_conditions.cpp"
 #include "solver.cpp"
