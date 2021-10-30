@@ -272,7 +272,6 @@ write_vtm(const std::string& file_name) const{
     mbs->SetBlock(i++, it_mesh_chunks.second.make_VTK_uniform_grid().GetPointer());
 
   // write VTK multi-block data set (vtm) file
-  std::cout << full_file_name << std::endl;
   vtkSmartPointer<vtkXMLMultiBlockDataWriter>
     output_file = vtkSmartPointer<vtkXMLMultiBlockDataWriter>::New();
   output_file->SetFileName(full_file_name.c_str());
