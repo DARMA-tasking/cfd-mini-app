@@ -6,6 +6,7 @@
 #include <cmath>
 
 #include <vtkSmartPointer.h>
+#include <vtkUniformGrid.h>
 #include <vtkMultiBlockDataSet.h>
 #include <vtkXMLMultiBlockDataWriter.h>
 
