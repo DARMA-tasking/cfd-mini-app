@@ -146,7 +146,7 @@ get_pressure(uint64_t i, uint64_t j) const{
   else
     return this->pressure(k);
 }
-
+#ifdef OUTPUT_VTK_FILES
 vtkSmartPointer<vtkUniformGrid> MeshChunk::
 make_VTK_uniform_grid() const{
   // instantiate VTK uniform grid from mesh chunk parameters
@@ -211,3 +211,4 @@ write_vti(const std::string& file_name) const{
   // return fill name with extension
   return full_file_name;
 }
+#endif
