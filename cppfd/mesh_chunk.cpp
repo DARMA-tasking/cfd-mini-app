@@ -4,6 +4,7 @@
 #include <array>
 #include <Kokkos_Core.hpp>
 
+#ifdef OUTPUT_VTK_FILES
 #include <vtkDoubleArray.h>
 #include <vtkIntArray.h>
 #include <vtkCellData.h>
@@ -11,6 +12,7 @@
 #include <vtkUniformGrid.h>
 #include <vtkSmartPointer.h>
 #include <vtkXMLImageDataWriter.h>
+#endif
 
 MeshChunk::
 MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,

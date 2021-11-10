@@ -1,0 +1,2 @@
+#pragma once
+#cmakedefine OUTPUT_VTK_FILES

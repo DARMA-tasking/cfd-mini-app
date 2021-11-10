@@ -7,7 +7,9 @@ project(cfd-mini-app)
 find_package(Kokkos REQUIRED)
 find_package(KokkosKernels REQUIRED)
 
-find_package(VTK REQUIRED COMPONENTS vtkCommonCore vtkIOXML)
+if(OUTPUT_VTK_FILES)
+  find_package(VTK REQUIRED COMPONENTS vtkCommonCore vtkIOXML)
+endif()
 
 find_package(GTest CONFIG REQUIRED)
 
@@ -16,6 +18,8 @@ find_program(ccache_binary ccache)
 if (ccache_binary)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${ccache_binary}")
 endif()
+
+configure_file(cfd_config.h.in cfd_config.h)
 
 # Add library targets
 add_library(mesh_chunk mesh_chunk.cpp)

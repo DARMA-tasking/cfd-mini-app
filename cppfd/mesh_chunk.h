@@ -6,7 +6,9 @@
 
 #include <Kokkos_Core.hpp>
 
+#ifdef OUTPUT_VTK_FILES
 #include <vtkSmartPointer.h>
+#endif
 
 enum struct PointIndexEnum : int8_t {
   CORNER_0 = 0,
@@ -66,7 +68,9 @@ class MeshChunk
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
 
     // converter to VTK uniform grid
+    #ifdef OUTPUT_VTK_FILES
     vtkSmartPointer<vtkUniformGrid> make_VTK_uniform_grid() const;
+    #endif
 
     // writer to VTK file
     std::string write_vti(const std::string& file_name) const;
