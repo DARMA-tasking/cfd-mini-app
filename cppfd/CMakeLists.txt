@@ -11,7 +11,7 @@ if(OUTPUT_VTK_FILES)
   find_package(VTK REQUIRED COMPONENTS vtkCommonCore vtkIOXML)
 endif()
 
-find_package(GTest REQUIRED)
+find_package(GTest CONFIG REQUIRED)
 
 # Try to find ccache to speed up compilation
 find_program(ccache_binary ccache)
