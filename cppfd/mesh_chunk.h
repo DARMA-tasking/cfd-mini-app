@@ -30,7 +30,9 @@ enum struct PointTypeEnum : int8_t {
   INVALID = 4
 };
 
+#ifdef OUTPUT_VTK_FILES
 class vtkUniformGrid;
+#endif
 
 class MeshChunk
 {

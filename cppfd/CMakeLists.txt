@@ -11,7 +11,7 @@ if(OUTPUT_VTK_FILES)
   find_package(VTK REQUIRED COMPONENTS vtkCommonCore vtkIOXML)
 endif()
 
-find_package(GTest CONFIG REQUIRED)
+find_package(GTest REQUIRED)
 
 # Try to find ccache to speed up compilation
 find_program(ccache_binary ccache)
@@ -29,7 +29,9 @@ add_library(solver solver.cpp)
 
 # Add executable target
 add_executable(test test.cpp)
-add_executable(parallel_test parallel_test.cpp)
+if(OUTPUT_VTK_FILES)
+  add_executable(parallel_test parallel_test.cpp)
+endif()
 add_executable(allTests allTests.cpp)
 
 message(STATUS "VTK libraries: ${VTK_LIBRARIES}")
@@ -40,5 +42,7 @@ target_link_libraries(parallel_mesh Kokkos::kokkos ${VTK_LIBRARIES})
 target_link_libraries(boundary_conditions Kokkos::kokkos ${VTK_LIBRARIES})
 target_link_libraries(solver Kokkos::kokkos Kokkos::kokkoskernels  ${VTK_LIBRARIES})
 target_link_libraries(test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
-target_link_libraries(parallel_test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
+if(OUTPUT_VTK_FILES)
+  target_link_libraries(parallel_test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
+endif()
 target_link_libraries(allTests Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES} GTest::gtest)

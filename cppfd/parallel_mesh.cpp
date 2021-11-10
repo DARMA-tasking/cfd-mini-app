@@ -5,10 +5,12 @@
 #include <map>
 #include <cmath>
 
+#ifdef OUTPUT_VTK_FILES
 #include <vtkSmartPointer.h>
 #include <vtkUniformGrid.h>
 #include <vtkMultiBlockDataSet.h>
 #include <vtkXMLMultiBlockDataWriter.h>
+#endif
 
 const uint64_t uint64_nan = static_cast<uint64_t>(-1);
 
@@ -259,6 +261,7 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
   return {m, n};
 }
 
+#ifdef OUTPUT_VTK_FILES
 std::string ParallelMesh::
 write_vtm(const std::string& file_name) const{
   // assemble full file name with extension
@@ -282,3 +285,4 @@ write_vtm(const std::string& file_name) const{
   // return fill name with extension
   return full_file_name;
 }
+#endif
