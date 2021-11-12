@@ -1,4 +1,3 @@
-#ifdef OUTPUT_VTK_FILES
 #include <iostream>
 #include <array>
 #include <map>
@@ -77,4 +76,3 @@ int main(int argc, char** argv) {
   std::cout << std::endl;
   return 0;
 }
-#endif
