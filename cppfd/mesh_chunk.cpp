@@ -4,6 +4,7 @@
 #include <array>
 #include <Kokkos_Core.hpp>
 
+#ifdef OUTPUT_VTK_FILES
 #include <vtkDoubleArray.h>
 #include <vtkIntArray.h>
 #include <vtkCellData.h>
@@ -11,6 +12,7 @@
 #include <vtkUniformGrid.h>
 #include <vtkSmartPointer.h>
 #include <vtkXMLImageDataWriter.h>
+#endif
 
 MeshChunk::
 MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
@@ -144,7 +146,7 @@ get_pressure(uint64_t i, uint64_t j) const{
   else
     return this->pressure(k);
 }
-
+#ifdef OUTPUT_VTK_FILES
 vtkSmartPointer<vtkUniformGrid> MeshChunk::
 make_VTK_uniform_grid() const{
   // instantiate VTK uniform grid from mesh chunk parameters
@@ -209,3 +211,4 @@ write_vti(const std::string& file_name) const{
   // return fill name with extension
   return full_file_name;
 }
+#endif

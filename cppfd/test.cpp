@@ -65,12 +65,14 @@ int main(int argc, char** argv) {
   Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
   solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
+  #ifdef OUTPUT_VTK_FILES
   // save results
   std::string file_name = mesh->write_vti("test");
   std::cout << std::endl
 	    << "Created VTK structured grid file: \""
 	    << file_name<<"\""
 	    << std::endl;
+  #endif
 
   // terminate cleanly
   std::cout << std::endl;

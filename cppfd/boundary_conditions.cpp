@@ -1,3 +1,4 @@
+#include <memory>
 #include "boundary_conditions.h"
 
 void BoundaryConditions::apply_velocity_bc(){
