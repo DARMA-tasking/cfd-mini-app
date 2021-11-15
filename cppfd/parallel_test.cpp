@@ -130,12 +130,14 @@ int main(int argc, char** argv) {
   std::cout << "  global -> local -> global point coordinates mismatches: "
 	    << p_mismatch << "\n\n";
 
+  #ifdef OUTPUT_VTK_FILES
   // save results
   std::string file_name = p_mesh.write_vtm("p_test");
   std::cout << std::endl
 	    << "Created VTK multi-block mesh file: \""
 	    << file_name<<"\""
 	    << std::endl;
+  #endif
 
   // terminate cleanly
   std::cout << std::endl;
