@@ -3,6 +3,7 @@
 #include <array>
 #include <map>
 
+#include "cfd_config.h"
 #include "mesh_chunk.h"
 
 struct LocalCoordinates

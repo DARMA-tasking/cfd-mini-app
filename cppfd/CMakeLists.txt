@@ -3,7 +3,11 @@ cmake_minimum_required(VERSION 3.15)
 # Set the project name
 project(cfd-mini-app)
 
-#Setting options
+# Setting configure file
+configure_file(cfd_config.h.in cfd_config.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
+# Setting options
 option(OUTPUT_VTK_FILES "When OFF allows for a non-VTK build" OFF)
 
 # Find required dependencies
@@ -14,15 +18,13 @@ if(OUTPUT_VTK_FILES)
   find_package(VTK REQUIRED COMPONENTS vtkCommonCore vtkIOXML)
 endif()
 
-find_package(GTest CONFIG REQUIRED)
+find_package(GTest REQUIRED)
 
 # Try to find ccache to speed up compilation
 find_program(ccache_binary ccache)
 if (ccache_binary)
   set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${ccache_binary}")
 endif()
-
-configure_file(cfd_config.h.in cfd_config.h)
 
 # Add library targets
 add_library(mesh_chunk mesh_chunk.cpp)

@@ -1,10 +1,11 @@
-#include <memory>
 #pragma once
+#include <memory>
 #include <array>
 #include <string>
 #include <cmath>
 #include <map>
 
+#include "cfd_config.h"
 #include"mesh_chunk.h"
 
 class BoundaryConditions

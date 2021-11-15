@@ -1,4 +1,5 @@
 #pragma once
+#include "cfd_config.h"
 #include <cstdio>
 #include <array>
 #include <string>
