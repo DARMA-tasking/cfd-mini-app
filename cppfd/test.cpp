@@ -67,9 +67,7 @@ int main(int argc, char** argv) {
 
   #ifdef OUTPUT_TXT_FILES
   // save results as text files
-  std::cout << std::endl
-	    << "To be done: save test text file(s)"
-	    << std::endl;
+  std::string txt_file_name = mesh->write_txt("test", "velocity");
   #endif
 
   #ifdef OUTPUT_VTK_FILES
