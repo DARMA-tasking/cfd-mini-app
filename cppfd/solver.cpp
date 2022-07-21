@@ -220,8 +220,8 @@ void Solver::assign_CRS_entry(uint64_t &idx,
 			      const uint64_t k,
 			      const uint64_t offset,
 			      const double value,
-			      Kokkos::View<uint64_t*> row_ptrs,
-			      Kokkos::View<uint64_t*> col_ids,
+			      Kokkos::View<int64_t*> row_ptrs,
+			      Kokkos::View<int64_t*> col_ids,
 			      Kokkos::View<double*> values){
 
   // treat first entry in row differently
@@ -248,8 +248,8 @@ double Solver::assemble_Laplacian(){
   const uint64_t nm1 = n - 1;
   const uint64_t mn = m * n;
   const uint64_t nnz = 5 * mn - 2 * (m + n);
-  Kokkos::View<uint64_t*> row_ptrs("row pointers", mn + 1);
-  Kokkos::View<uint64_t*> col_ids("column indices", nnz);
+  Kokkos::View<int64_t*> row_ptrs("row pointers", mn + 1);
+  Kokkos::View<int64_t*> col_ids("column indices", nnz);
   Kokkos::View<double*> values("values", nnz);
 
   // iterate over m*n cells to construct mn*mn Laplacian
@@ -471,7 +471,7 @@ Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n
   // create handle to Kokkos Gauss-Seidel kernel
   Kokkos::View<double*> scaled_values("scaled values", this->Laplacian.nnz());
   KokkosKernels::Experimental::
-    KokkosKernelsHandle<uint64_t, uint64_t, double, exec_space, mem_space, mem_space> handle;
+    KokkosKernelsHandle<int64_t, int64_t, double, exec_space, mem_space, mem_space> handle;
   handle.create_gs_handle(KokkosSparse::GS_DEFAULT);
   KokkosSparse::Experimental::
     gauss_seidel_symbolic(&handle, mn, mn,
