@@ -10,6 +10,8 @@
 #include <Kokkos_ArithTraits.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
 
+#include <mpi.h>
+
 #include "mesh_chunk.h"
 #include "boundary_conditions.h"
 
