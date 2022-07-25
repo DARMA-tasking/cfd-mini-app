@@ -85,6 +85,13 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   double time_poisson_solve = 0.;
   double time_corrector_step = 0.;
 
+  // initialize MPI environment
+  #ifdef USE_MPI
+  MPI_Init(NULL, NULL);
+  std::cout << std::endl
+    << " Predicting velocity using MPI"<< std::endl;
+  #endif
+
   //start iterating on time steps
   int iteration = 0;
   while(t < this->t_final){
@@ -102,6 +109,13 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
     this->predict_velocity();
     double time_post_predict = timer2.seconds();
     time_predictor_step += time_post_predict;
+
+    // predict velocity without pressure using MPI function
+    #ifdef USE_MPI
+    MPI_predict_velocity();
+    #endif
+
+    // Display velocity values in first iteration stopping point case
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
       std::cout << " predicted velocity:\n";
       for(uint64_t j = 0; j < this->mesh_chunk->get_n_points_y(); j++){
@@ -213,6 +227,11 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
 	      << std::endl;
   }
   timer.reset();
+
+  // initialize MPI environment
+  #ifdef USE_MPI
+  MPI_Finalize();
+  #endif
 }
 
 void Solver::assign_CRS_entry(uint64_t &idx,
@@ -367,6 +386,20 @@ void Solver::predict_velocity(){
       this->mesh_chunk->set_velocity_y(i, j, v_star(k, 1));
     }
   }
+}
+
+// implementation of the predictor step using MPI
+void Solver::MPI_predict_velocity(){
+  Kokkos::View<double*[2]> v_star("predicted velocity", this->mesh_chunk->get_n_points_x() * this->mesh_chunk->get_n_points_y());
+
+  // Get the number of processes
+  int p;
+  MPI_Comm_size(MPI_COMM_WORLD, &p);
+
+  // Get process rank
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+
 }
 
 // implementation of the poisson RHS assembly

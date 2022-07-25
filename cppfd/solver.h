@@ -78,6 +78,9 @@ class Solver
     // compute predicted velocities without pressure term
     void predict_velocity();
 
+    // compute predicted velocities without pressure term using MPI
+    void MPI_predict_velocity();
+
     // build poisson equation right hand side vector
     void assemble_poisson_RHS();
 
