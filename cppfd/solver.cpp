@@ -89,7 +89,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   #ifdef USE_MPI
   MPI_Init(NULL, NULL);
   std::cout << std::endl
-    << " Predicting velocity using MPI"<< std::endl;
+    << " Using MPI to predict velocity"<< std::endl;
   #endif
 
   //start iterating on time steps
@@ -228,7 +228,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   }
   timer.reset();
 
-  // initialize MPI environment
+  // Finalize MPI environment
   #ifdef USE_MPI
   MPI_Finalize();
   #endif
