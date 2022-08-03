@@ -53,7 +53,7 @@ class Solver
     using mem_space = typename exec_space::memory_space;
     using device_type = typename Kokkos::
       Device<Kokkos::DefaultExecutionSpace, mem_space>;
-  using matrix_type = typename KokkosSparse::CrsMatrix<double, uint64_t, device_type, void, uint64_t>;
+  using matrix_type = typename KokkosSparse::CrsMatrix<double, int64_t, device_type, void, int64_t>;
     matrix_type get_Laplacian() {return this->Laplacian;}
 
     // main solver routine
@@ -69,8 +69,8 @@ class Solver
 			  const uint64_t k,
 			  const uint64_t offset,
 			  const double value,
-			  Kokkos::View<uint64_t*> row_ptrs,
-			  Kokkos::View<uint64_t*> col_ids,
+			  Kokkos::View<int64_t*> row_ptrs,
+			  Kokkos::View<int64_t*> col_ids,
 			  Kokkos::View<double*> values);
 
     // compute predicted velocities without pressure term
