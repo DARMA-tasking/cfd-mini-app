@@ -61,4 +61,12 @@ class ParallelMesh
 
     // Storage for mesh chunks
     std::map<std::array<uint64_t,2>,MeshChunk> mesh_chunks = {};
+
+    #ifdef USE_MPI
+    // storage for bordering velocity values
+    std::map<Border, Kokkos::View<double*[2]>> border_velocities = {};
+
+    // MPI rank of mesh chunk
+    int64_t mpi_rank;
+    #endif
 };

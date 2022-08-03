@@ -21,6 +21,15 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
 	      << std::endl;
 
   if(this->verbosity >= 1){
+    std::cout << "Assembling parallel meshes..." << std::endl;
+  }
+  this->assemble_parallel_meshes(this->p);
+  if(this->verbosity >= 1){
+    std::cout << "Writing parallel meshes vtm files..." << std::endl;
+  }
+  this->write_vtms("all_vtm_test");
+
+  if(this->verbosity >= 1){
     std::cout << "Applying velocity boundary conditions..." << std::endl;
   }
   this->boundary_conditions.apply_velocity_bc();
@@ -232,6 +241,46 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   #ifdef USE_MPI
   MPI_Finalize();
   #endif
+}
+
+void Solver::assemble_parallel_meshes(uint64_t n_parallel_meshes){
+  long root = sqrt(n_parallel_meshes);
+  uint64_t n_cells_domain = this->domain_size_x;
+
+  uint64_t n_x;
+  uint64_t n_y;
+  double cell_size = this->h;
+  uint16_t n_p = 2;
+  uint16_t n_q = 2;
+  double o_x = 0.;
+  double o_y = 0.;
+
+  // divide computational domain in equal parts if number of parallel meshes is perfect square
+  if((root * root) == n_parallel_meshes){
+    if(!(n_cells_domain % root)){
+      n_x = n_cells_domain / root;
+      n_y = n_x;
+      for(uint64_t j = 0; j < root; j++){
+        o_x = 0;
+        for(uint64_t i = 0; i < root; i++){
+          this->parallel_meshes.emplace
+            (std::piecewise_construct,
+            std::forward_as_tuple(std::array<uint64_t,2>{i, j}),
+            std::forward_as_tuple(n_x, n_y, cell_size, n_p, n_q, o_x, o_y));
+          o_x += n_x * cell_size;
+        }
+        o_y += n_y * cell_size;
+      }
+    }
+    else{
+      std::cout << "Warning : number of domain cells cant be divided equally in given number of parallel meshes, case not treated yet"
+      << std::endl;
+    }
+  }
+  else{
+    std::cout << "Warning : number of parallel meshes is not perfect square, case not treated yet"
+    << std::endl;
+  }
 }
 
 void Solver::assign_CRS_entry(uint64_t &idx,
@@ -593,3 +642,24 @@ double Solver::compute_global_courant_number(){
   }
   return max_C;
 }
+
+#ifdef OUTPUT_VTK_FILES
+uint64_t Solver::write_vtms(const std::string& file_name) const{
+  std::string file_name_indexed;
+  std::string index;
+  uint64_t k = 0;
+  for (const auto& it_parallel_meshes : this->parallel_meshes){
+    index = "";
+    if(k < 10){
+      index += "0";
+    }
+    index += std::to_string(k);
+    file_name_indexed = file_name + index;
+    it_parallel_meshes.second.write_vtm(file_name_indexed);
+    k++;
+  }
+
+  // return fill name with extension
+  return k;
+}
+#endif

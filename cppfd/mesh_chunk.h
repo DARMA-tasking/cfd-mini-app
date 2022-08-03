@@ -110,11 +110,6 @@ class MeshChunk
     // physical cell size
     double h = 1.;
 
-    #ifdef USE_MPI
-    // MPI rank of mesh chunk
-    int64_t mpi_rank;
-    #endif
-
     // mesh point types
     Kokkos::View<PointTypeEnum**> point_type = {};
 
@@ -123,9 +118,4 @@ class MeshChunk
 
     // mesh cell data
     Kokkos::View<double*> pressure = {};
-
-    #ifdef USE_MPI
-    // storage for bordering velocity values
-    std::map<Border, Kokkos::View<double*[2]>> border_velocities = {};
-    #endif
 };
