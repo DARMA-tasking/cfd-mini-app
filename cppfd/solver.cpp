@@ -23,7 +23,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   if(this->verbosity >= 1){
     std::cout << "Assembling parallel meshes..." << std::endl;
   }
-  this->assemble_parallel_meshes(this->p);
+  this->assemble_parallel_meshes();
   if(this->verbosity >= 1){
     std::cout << "Writing parallel meshes vtm files..." << std::endl;
   }
@@ -243,43 +243,58 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   #endif
 }
 
-void Solver::assemble_parallel_meshes(uint64_t n_parallel_meshes){
-  long root = sqrt(n_parallel_meshes);
-  uint64_t n_cells_domain = this->domain_size_x;
-
+void Solver::assemble_parallel_meshes(){
   uint64_t n_x;
   uint64_t n_y;
-  double cell_size = this->h;
-  uint16_t n_p = 2;
-  uint16_t n_q = 2;
+  uint16_t n_p = this->n_colors_x;
+  uint16_t n_q = this->n_colors_y;
   double o_x = 0.;
   double o_y = 0.;
 
-  // divide computational domain in equal parts if number of parallel meshes is perfect square
-  if((root * root) == n_parallel_meshes){
-    if(!(n_cells_domain % root)){
-      n_x = n_cells_domain / root;
-      n_y = n_x;
-      for(uint64_t j = 0; j < root; j++){
-        o_x = 0;
-        for(uint64_t i = 0; i < root; i++){
-          this->parallel_meshes.emplace
-            (std::piecewise_construct,
-            std::forward_as_tuple(std::array<uint64_t,2>{i, j}),
-            std::forward_as_tuple(n_x, n_y, cell_size, n_p, n_q, o_x, o_y));
-          o_x += n_x * cell_size;
+  uint64_t n_cells_p_mesh_x = this->domain_size_x / this->n_p_mesh_x;
+  uint64_t n_cells_p_mesh_y = this->domain_size_y / this->n_p_mesh_y;
+
+  uint64_t remainder_x = this->domain_size_x % n_cells_p_mesh_x;
+  uint64_t remainder_y = this->domain_size_y % n_cells_p_mesh_y;
+
+  // case where size of domain is NOT a multiple of the number of parallel meshes given
+  if(remainder_x || remainder_y){
+    for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
+      o_x = 0;
+      for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
+        n_x = n_cells_p_mesh_x;
+        n_y = n_cells_p_mesh_y;
+        // correct parallel mesh size for last column of parallel meshes
+        if(remainder_x && (kx == this->n_p_mesh_x - 1)){
+          n_x += remainder_x;
         }
-        o_y += n_y * cell_size;
+        // correct parallel mesh size for last row of parallel meshes
+        if(remainder_y && (ky == this->n_p_mesh_y - 1)){
+          n_y += remainder_y;
+        }
+        this->parallel_meshes.emplace
+          (std::piecewise_construct,
+          std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
+          std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, o_x, o_y));
+        o_x += n_x * this->h;
       }
+      o_y += n_y * this->h;
     }
-    else{
-      std::cout << "Warning : number of domain cells cant be divided equally in given number of parallel meshes, case not treated yet"
-      << std::endl;
-    }
+
   }
+  // case where size of domain is a multiple of the number of parallel meshes given
   else{
-    std::cout << "Warning : number of parallel meshes is not perfect square, case not treated yet"
-    << std::endl;
+    for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
+      o_x = 0;
+      for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
+        this->parallel_meshes.emplace
+          (std::piecewise_construct,
+          std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
+          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_x, this->h, n_p, n_q, o_x, o_y));
+        o_x += n_cells_p_mesh_x * this->h;
+      }
+      o_y += n_cells_p_mesh_y * this->h;
+    }
   }
 }
 

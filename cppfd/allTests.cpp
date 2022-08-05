@@ -20,7 +20,8 @@ struct solver_test : testing::Test{
     double t_final = 0.1;
     double max_C = 0.5;
     uint64_t n_cells = 3;
-    uint64_t n_parallel_meshes = 1;
+    uint64_t n_parallel_meshes_x = 1;
+    uint64_t n_parallel_meshes_y = 1;
     uint64_t n_colors_x = 1;
     uint64_t n_colors_y = 1;
 
@@ -53,7 +54,7 @@ struct solver_test : testing::Test{
 
     // instantiate solver
     this->solver = std::make_unique<Solver>
-      (mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0, 25, 25, 1, n_parallel_meshes, n_colors_x, n_colors_y);
+      (mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0, 25, 25, 1, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
   }
 };
 

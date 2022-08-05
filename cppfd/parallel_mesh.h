@@ -6,6 +6,17 @@
 #include "cfd_config.h"
 #include "mesh_chunk.h"
 
+enum struct BorderIndexEnum : int8_t {
+  BOTTOM = 0,
+  RIGHT = 1,
+  LEFT = 2,
+  TOP = 3,
+  BOTTOM_L= 4,
+  BOTTOM_R = 5,
+  TOP_L = 6,
+  TOP_R = 7
+};
+
 struct LocalCoordinates
 {
   uint64_t block[2];

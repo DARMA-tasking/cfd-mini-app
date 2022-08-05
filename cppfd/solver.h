@@ -28,7 +28,8 @@ class Solver
       uint64_t domain_size_x,
       uint64_t domain_size_y,
       double cell_size,
-      uint64_t n_parallel_meshes,
+      uint64_t n_pmesh_x,
+      uint64_t n_pmesh_y,
       uint64_t colors_x,
       uint64_t colors_y)
       : mesh_chunk(m)
@@ -42,7 +43,9 @@ class Solver
       , domain_size_x(domain_size_x)
       , domain_size_y(domain_size_y)
       , h(cell_size)
-      , p(n_parallel_meshes)
+      , p(n_p_mesh_x * n_pmesh_y)
+      , n_p_mesh_x(n_pmesh_x)
+      , n_p_mesh_y(n_pmesh_y)
       , n_colors_x(colors_x)
       , n_colors_y(colors_y)
     {}
@@ -84,7 +87,7 @@ class Solver
 
   private:
     // assemble parallel meshes that will be used depending on number of ranks
-    void assemble_parallel_meshes(uint64_t n_parallel_meshes);
+    void assemble_parallel_meshes();
 
     // set mesh chunk border types depending on their position in the global and parallel mesh
     void set_mesh_chunk_borders();
@@ -144,6 +147,8 @@ class Solver
 
     // parallel mesh variables
     uint64_t p = 1;
+    uint64_t n_p_mesh_x = 1;
+    uint64_t n_p_mesh_y = 1;
     uint64_t n_colors_x = 1;
     uint64_t n_colors_y = 1;
 
