@@ -256,21 +256,26 @@ void Solver::assemble_parallel_meshes(){
 
   uint64_t remainder_x = this->domain_size_x % n_cells_p_mesh_x;
   uint64_t remainder_y = this->domain_size_y % n_cells_p_mesh_y;
+  uint64_t r_x;
+  uint64_t r_y = remainder_y;
 
   // case where size of domain is NOT a multiple of the number of parallel meshes given
   if(remainder_x || remainder_y){
     for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
       o_x = 0;
+      r_x = remainder_x;
+      n_y = n_cells_p_mesh_y;
+      // correct parallel mesh size with remainder
+      if(r_y > 0){
+        n_y++;
+        r_y--;
+      }
       for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
         n_x = n_cells_p_mesh_x;
-        n_y = n_cells_p_mesh_y;
-        // correct parallel mesh size for last column of parallel meshes
-        if(remainder_x && (kx == this->n_p_mesh_x - 1)){
-          n_x += remainder_x;
-        }
-        // correct parallel mesh size for last row of parallel meshes
-        if(remainder_y && (ky == this->n_p_mesh_y - 1)){
-          n_y += remainder_y;
+        // correct parallel mesh size with remainder
+        if(r_x > 0){
+          n_x++;
+          r_x--;
         }
         this->parallel_meshes.emplace
           (std::piecewise_construct,
