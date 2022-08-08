@@ -259,6 +259,8 @@ void Solver::assemble_parallel_meshes(){
   uint64_t r_x;
   uint64_t r_y = remainder_y;
 
+  int8_t p_mesh_border;
+
   // case where size of domain is NOT a multiple of the number of parallel meshes given
   if(remainder_x || remainder_y){
     for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
@@ -277,10 +279,52 @@ void Solver::assemble_parallel_meshes(){
           n_x++;
           r_x--;
         }
+
+        // compute location type of current parallel mesh
+        if(kx == 0){
+          if(ky == 0){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_L);
+          }
+          else if(ky == this->n_p_mesh_y - 1){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_L);
+          }
+          else{
+            p_mesh_border = static_cast<int>(LocationIndexEnum::LEFT);
+          }
+        }
+        else if(kx == this->n_p_mesh_x - 1){
+          if(ky == 0){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_R);
+          }
+          else if(ky == this->n_p_mesh_y - 1){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_R);
+          }
+          else{
+            p_mesh_border = static_cast<int>(LocationIndexEnum::RIGHT);
+          }
+        }
+        else{
+          if(ky == 0){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM);
+          }
+          else if(ky == this->n_p_mesh_y - 1){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP);
+          }
+          else{
+            p_mesh_border = static_cast<int>(LocationIndexEnum::INTERIOR);
+          }
+        }
+
+        if(this->verbosity >= 2){
+          std::cout << "coordinates, pmesh border type: "
+          << "(" << kx << ", " << ky << ")"
+          << " // " << static_cast<int>(p_mesh_border) << '\n';
+        }
+
         this->parallel_meshes.emplace
           (std::piecewise_construct,
           std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-          std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, o_x, o_y));
+          std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
         o_x += n_x * this->h;
       }
       o_y += n_y * this->h;
@@ -292,10 +336,52 @@ void Solver::assemble_parallel_meshes(){
     for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
       o_x = 0;
       for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
+
+        // compute location type of current parallel mesh
+        if(kx == 0){
+          if(ky == 0){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_L);
+          }
+          else if(ky == this->n_p_mesh_y - 1){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_L);
+          }
+          else{
+            p_mesh_border = static_cast<int>(LocationIndexEnum::LEFT);
+          }
+        }
+        else if(kx == this->n_p_mesh_x - 1){
+          if(ky == 0){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_R);
+          }
+          else if(ky == this->n_p_mesh_y - 1){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_R);
+          }
+          else{
+            p_mesh_border = static_cast<int>(LocationIndexEnum::RIGHT);
+          }
+        }
+        else{
+          if(ky == 0){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM);
+          }
+          else if(ky == this->n_p_mesh_y - 1){
+            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP);
+          }
+          else{
+            p_mesh_border = static_cast<int>(LocationIndexEnum::INTERIOR);
+          }
+        }
+
+        if(this->verbosity >= 2){
+          std::cout << "coordinates, pmesh border type: "
+          << "(" << kx << ", " << ky << ")"
+          << " // " << static_cast<int>(p_mesh_border) << '\n';
+        }
+
         this->parallel_meshes.emplace
           (std::piecewise_construct,
           std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_x, this->h, n_p, n_q, o_x, o_y));
+          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_x, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
         o_x += n_cells_p_mesh_x * this->h;
       }
       o_y += n_cells_p_mesh_y * this->h;

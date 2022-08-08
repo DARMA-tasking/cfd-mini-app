@@ -16,7 +16,7 @@ const uint64_t uint64_nan = static_cast<uint64_t>(-1);
 
 ParallelMesh::
 ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
-			   uint16_t n_p, uint16_t n_q,
+			   uint16_t n_p, uint16_t n_q, int8_t border,
 			   double o_x, double o_y)
   : n_cells_x(n_x)
   , n_cells_y(n_y)
@@ -27,7 +27,8 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
   , q_x (n_x / n_p)
   , q_y (n_y / n_q)
   , r_x (n_x % n_p)
-  , r_y (n_y % n_q){
+  , r_y (n_y % n_q)
+	, border_type(border){
 
   // Compute cutoff between wide and narrow blocks
   this->cutoff_x = this->r_x * (this->q_x + 1);

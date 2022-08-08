@@ -6,15 +6,16 @@
 #include "cfd_config.h"
 #include "mesh_chunk.h"
 
-enum struct BorderIndexEnum : int8_t {
+enum struct LocationIndexEnum : int8_t {
   BOTTOM = 0,
   RIGHT = 1,
   LEFT = 2,
   TOP = 3,
-  BOTTOM_L= 4,
+  BOTTOM_L = 4,
   BOTTOM_R = 5,
   TOP_L = 6,
-  TOP_R = 7
+  TOP_R = 7,
+  INTERIOR = 8
 };
 
 struct LocalCoordinates
@@ -27,7 +28,7 @@ class ParallelMesh
 {
   public:
     ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
-		 uint16_t n_p, uint16_t n_q,
+		 uint16_t n_p, uint16_t n_q, int8_t border,
 		 double o_x = 0., double o_y = 0.);
 
     // only getters for unchangeable mesh characteristics
@@ -73,11 +74,14 @@ class ParallelMesh
     // Storage for mesh chunks
     std::map<std::array<uint64_t,2>,MeshChunk> mesh_chunks = {};
 
+    // border type
+    int8_t border_type;
+
     #ifdef USE_MPI
     // storage for bordering velocity values
     std::map<Border, Kokkos::View<double*[2]>> border_velocities = {};
 
-    // MPI rank of mesh chunk
+    // MPI rank of parallel mesh
     int64_t mpi_rank;
     #endif
 };
