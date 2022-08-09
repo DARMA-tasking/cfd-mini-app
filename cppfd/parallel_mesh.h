@@ -9,13 +9,14 @@
 enum struct LocationIndexEnum : int8_t {
   BOTTOM = 0,
   RIGHT = 1,
-  LEFT = 2,
-  TOP = 3,
+  TOP = 2,
+  LEFT = 3,
   BOTTOM_L = 4,
   BOTTOM_R = 5,
-  TOP_L = 6,
-  TOP_R = 7,
-  INTERIOR = 8
+  TOP_R = 6,
+  TOP_L = 7,
+  INTERIOR = 8,
+  SINGLE = 9
 };
 
 struct LocalCoordinates
@@ -31,7 +32,7 @@ class ParallelMesh
 		 uint16_t n_p, uint16_t n_q, int8_t border,
 		 double o_x = 0., double o_y = 0.);
 
-    // only getters for unchangeable mesh characteristics
+    // only getters for unchangeable parallel mesh characteristics
     uint64_t get_n_cells_x() const { return this->n_cells_x; }
     uint64_t get_n_cells_y() const { return this->n_cells_y; }
     uint64_t get_n_blocks_x() const { return this->n_blocks_x; }
@@ -40,6 +41,7 @@ class ParallelMesh
     uint64_t get_n_points_y() const { return this->n_cells_y + 1; }
     double get_cell_size() const { return this->h; }
     std::array<double,2> get_origin() const {return this->origin; }
+    uint8_t get_location_type() const { return this->location_type; }
 
     // global to local indexing converters
     LocalCoordinates GlobalToLocalCellIndices(uint64_t, uint64_t) const;
@@ -75,7 +77,7 @@ class ParallelMesh
     std::map<std::array<uint64_t,2>,MeshChunk> mesh_chunks = {};
 
     // border type
-    int8_t border_type;
+    int8_t location_type;
 
     #ifdef USE_MPI
     // storage for bordering velocity values

@@ -21,10 +21,10 @@ int main(int argc, char** argv) {
   double max_C = 0.5;
   uint64_t n_c_x = 32;
   uint64_t n_c_y = 32;
-  uint64_t n_parallel_meshes_x = 1;
-  uint64_t n_parallel_meshes_y = 1;
-  uint64_t n_colors_x = 1;
-  uint64_t n_colors_y = 1;
+  uint64_t n_parallel_meshes_x = 3;
+  uint64_t n_parallel_meshes_y = 3;
+  uint64_t n_colors_x = 3;
+  uint64_t n_colors_y = 3;
   std::cout << "Input parameters:"
 	    << "\n  density: " << density
 	    << "\n  dynamic viscosity: " << dynamic_viscosity

@@ -16,15 +16,15 @@
 #endif
 
 enum struct PointIndexEnum : int8_t {
-  CORNER_0 = 0,
-  CORNER_1 = 1,
-  CORNER_2 = 2,
-  CORNER_3 = 3,
-  EDGE_0 = 4,
-  EDGE_1 = 5,
-  EDGE_2 = 6,
-  EDGE_3 = 7,
-  INTERIOR = 8
+  CORNER_0 = 0, // Bottom Left
+  CORNER_1 = 1, // Bottom Right
+  CORNER_2 = 2, // Top Right
+  CORNER_3 = 3, // Top Left
+  EDGE_0 = 4, // Bottom
+  EDGE_1 = 5, // Right
+  EDGE_2 = 6, // Top
+  EDGE_3 = 7, // Left
+  INTERIOR = 8 // Interior
 };
 
 enum struct PointTypeEnum : int8_t {
