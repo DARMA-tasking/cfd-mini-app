@@ -263,15 +263,44 @@ void Solver::assemble_parallel_meshes(){
 
   // case where size of domain is NOT a multiple of the number of parallel meshes given
   if(remainder_x || remainder_y){
-    for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
-      o_x = 0;
-      r_x = remainder_x;
-      n_y = n_cells_p_mesh_y;
-      // correct parallel mesh size with remainder
-      if(r_y > 0){
-        n_y++;
-        r_y--;
+    // case where there is only one column of parallel meshes
+    if((this->n_p_mesh_x == 1) && (this->n_p_mesh_y != 1)){
+      for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
+        n_y = n_cells_p_mesh_y;
+        // correct parallel mesh size with remainder
+        if(r_y > 0){
+          n_y++;
+          r_y--;
+        }
+
+        // compute location type of current parallel mesh
+        if(ky == 0){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_BOT);
+        }
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_TOP);
+        }
+        else{
+          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_MID);
+        }
+
+        if(this->verbosity >= 2){
+          std::cout << "coordinates, pmesh border type: "
+          << "(0, " << ky << ")"
+          << " // " << static_cast<int>(p_mesh_border) << '\n';
+        }
+
+        // construct current parallel mesh
+        this->parallel_meshes.emplace
+          (std::piecewise_construct,
+          std::forward_as_tuple(std::array<uint64_t,2>{0, ky}),
+          std::forward_as_tuple(n_cells_p_mesh_x, n_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+
+        o_y += n_y * this->h;
       }
+    }
+    // case where there is only one row of parallel meshes
+    else if((this->n_p_mesh_x != 1) && (this->n_p_mesh_y == 1)){
       for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
         n_x = n_cells_p_mesh_x;
         // correct parallel mesh size with remainder
@@ -282,59 +311,169 @@ void Solver::assemble_parallel_meshes(){
 
         // compute location type of current parallel mesh
         if(kx == 0){
-          if(ky == 0){
-            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_L);
-          }
-          else if(ky == this->n_p_mesh_y - 1){
-            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_L);
-          }
-          else{
-            p_mesh_border = static_cast<int>(LocationIndexEnum::LEFT);
-          }
+          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_L);
         }
         else if(kx == this->n_p_mesh_x - 1){
-          if(ky == 0){
-            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_R);
-          }
-          else if(ky == this->n_p_mesh_y - 1){
-            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_R);
-          }
-          else{
-            p_mesh_border = static_cast<int>(LocationIndexEnum::RIGHT);
-          }
+          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_R);
         }
         else{
-          if(ky == 0){
-            p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM);
-          }
-          else if(ky == this->n_p_mesh_y - 1){
-            p_mesh_border = static_cast<int>(LocationIndexEnum::TOP);
-          }
-          else{
-            p_mesh_border = static_cast<int>(LocationIndexEnum::INTERIOR);
-          }
+          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID);
         }
 
         if(this->verbosity >= 2){
           std::cout << "coordinates, pmesh border type: "
-          << "(" << kx << ", " << ky << ")"
+          << "( " << kx << ", 0)"
           << " // " << static_cast<int>(p_mesh_border) << '\n';
         }
 
+        // construct current parallel mesh
         this->parallel_meshes.emplace
           (std::piecewise_construct,
-          std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-          std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+          std::forward_as_tuple(std::array<uint64_t,2>{kx, 0}),
+          std::forward_as_tuple(n_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+
         o_x += n_x * this->h;
       }
-      o_y += n_y * this->h;
     }
+    else{
+      for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
+        o_x = 0;
+        r_x = remainder_x;
+        n_y = n_cells_p_mesh_y;
+        // correct parallel mesh size with remainder
+        if(r_y > 0){
+          n_y++;
+          r_y--;
+        }
+        for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
+          n_x = n_cells_p_mesh_x;
+          // correct parallel mesh size with remainder
+          if(r_x > 0){
+            n_x++;
+            r_x--;
+          }
 
+          // compute location type of current parallel mesh
+          if(kx == 0){
+            if(ky == 0){
+              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_L);
+            }
+            else if(ky == this->n_p_mesh_y - 1){
+              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_L);
+            }
+            else{
+              p_mesh_border = static_cast<int>(LocationIndexEnum::LEFT);
+            }
+          }
+          else if(kx == this->n_p_mesh_x - 1){
+            if(ky == 0){
+              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_R);
+            }
+            else if(ky == this->n_p_mesh_y - 1){
+              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_R);
+            }
+            else{
+              p_mesh_border = static_cast<int>(LocationIndexEnum::RIGHT);
+            }
+          }
+          else{
+            if(ky == 0){
+              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM);
+            }
+            else if(ky == this->n_p_mesh_y - 1){
+              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP);
+            }
+            else{
+              p_mesh_border = static_cast<int>(LocationIndexEnum::INTERIOR);
+            }
+          }
+
+          if(this->verbosity >= 2){
+            std::cout << "coordinates, pmesh border type: "
+            << "(" << kx << ", " << ky << ")"
+            << " // " << static_cast<int>(p_mesh_border) << '\n';
+          }
+
+          this->parallel_meshes.emplace
+            (std::piecewise_construct,
+            std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
+            std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+          o_x += n_x * this->h;
+        }
+        o_y += n_y * this->h;
+      }
+    }
   }
   // case where size of domain is a multiple of the number of parallel meshes given
   else{
-    // case where parallel mesh is NOT unique
-    if(!(n_p_mesh_x == 1) || !(n_p_mesh_x == 1)){
+    // case where parallel mesh is unique
+    if((n_p_mesh_x == 1) && (n_p_mesh_y == 1)){
+      this->parallel_meshes.emplace
+        (std::piecewise_construct,
+        std::forward_as_tuple(std::array<uint64_t,2>{0, 0}),
+        std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, static_cast<int>(LocationIndexEnum::SINGLE), o_x, o_y));
+    }
+    // case where there is only one column of parallel meshes
+    else if((this->n_p_mesh_x == 1) && (this->n_p_mesh_y != 1)){
+      for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
+
+        // compute location type of current parallel mesh
+        if(ky == 0){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_BOT);
+        }
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_TOP);
+        }
+        else{
+          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_MID);
+        }
+
+        if(this->verbosity >= 2){
+          std::cout << "coordinates, pmesh border type: "
+          << "(0, " << ky << ")"
+          << " // " << static_cast<int>(p_mesh_border) << '\n';
+        }
+
+        // construct current parallel mesh
+        this->parallel_meshes.emplace
+          (std::piecewise_construct,
+          std::forward_as_tuple(std::array<uint64_t,2>{0, ky}),
+          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+
+        o_y += n_cells_p_mesh_y * this->h;
+      }
+    }
+    // case where there is only one row of parallel meshes
+    else if((this->n_p_mesh_x != 1) && (this->n_p_mesh_y == 1)){
+      for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
+
+        // compute location type of current parallel mesh
+        if(kx == 0){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_L);
+        }
+        else if(kx == this->n_p_mesh_x - 1){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_R);
+        }
+        else{
+          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID);
+        }
+
+        if(this->verbosity >= 2){
+          std::cout << "coordinates, pmesh border type: "
+          << "( " << kx << ", 0)"
+          << " // " << static_cast<int>(p_mesh_border) << '\n';
+        }
+
+        // construct current parallel mesh
+        this->parallel_meshes.emplace
+          (std::piecewise_construct,
+          std::forward_as_tuple(std::array<uint64_t,2>{kx, 0}),
+          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+
+        o_x += n_cells_p_mesh_x * this->h;
+      }
+    }
+    else {
       for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
         o_x = 0;
         for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
@@ -384,19 +523,12 @@ void Solver::assemble_parallel_meshes(){
           this->parallel_meshes.emplace
             (std::piecewise_construct,
             std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-            std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_x, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+            std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
 
           o_x += n_cells_p_mesh_x * this->h;
         }
         o_y += n_cells_p_mesh_y * this->h;
       }
-    }
-    // case where parallel mesh is unique
-    else if((n_p_mesh_x == 1) && (n_p_mesh_y == 1)){
-      this->parallel_meshes.emplace
-        (std::piecewise_construct,
-        std::forward_as_tuple(std::array<uint64_t,2>{0, 0}),
-        std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_x, this->h, n_p, n_q, static_cast<int>(LocationIndexEnum::SINGLE), o_x, o_y));
     }
   }
 }

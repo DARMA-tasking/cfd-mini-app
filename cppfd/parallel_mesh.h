@@ -16,7 +16,16 @@ enum struct LocationIndexEnum : int8_t {
   TOP_R = 6,
   TOP_L = 7,
   INTERIOR = 8,
-  SINGLE = 9
+  // case where there is only one parallel mesh in domain -> (1, 1)
+  SINGLE = 9,
+  // case where there are only two parallel meshes in domain along y axis -> (1, 2)
+  VERT_BAR_TOP = 10,
+  VERT_BAR_MID  = 11,
+  VERT_BAR_BOT = 12,
+  // case where there are only two parallel meshes in domain along x axis -> (2, 1)
+  HORIZ_BAR_L = 13,
+  HORIZ_BAR_MID = 14,
+  HORIZ_BAR_R = 15
 };
 
 struct LocalCoordinates
