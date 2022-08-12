@@ -27,7 +27,9 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   if(this->verbosity >= 1){
     std::cout << "Writing parallel meshes vtm files..." << std::endl << std::endl;
   }
+  #ifdef OUTPUT_VTK_FILES
   this->write_vtms("all_vtm_test");
+  #endif
 
   if(this->verbosity >= 1){
     std::cout << "Applying velocity boundary conditions..." << std::endl;
@@ -893,6 +895,7 @@ double Solver::compute_global_courant_number(){
   return max_C;
 }
 
+#ifdef OUTPUT_VTK_FILES
 uint64_t Solver::write_vtms(const std::string& file_name) const{
   std::string file_name_indexed;
   std::string index;
@@ -911,3 +914,4 @@ uint64_t Solver::write_vtms(const std::string& file_name) const{
   // return fill name with extension
   return k;
 }
+#endif
