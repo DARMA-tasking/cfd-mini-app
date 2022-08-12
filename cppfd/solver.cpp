@@ -893,7 +893,6 @@ double Solver::compute_global_courant_number(){
   return max_C;
 }
 
-#ifdef OUTPUT_VTK_FILES
 uint64_t Solver::write_vtms(const std::string& file_name) const{
   std::string file_name_indexed;
   std::string index;
@@ -912,4 +911,3 @@ uint64_t Solver::write_vtms(const std::string& file_name) const{
   // return fill name with extension
   return k;
 }
-#endif
