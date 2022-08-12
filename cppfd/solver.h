@@ -43,7 +43,7 @@ class Solver
       , domain_size_x(domain_size_x)
       , domain_size_y(domain_size_y)
       , h(cell_size)
-      , p(n_p_mesh_x * n_pmesh_y)
+      , p(n_pmesh_x * n_pmesh_y)
       , n_p_mesh_x(n_pmesh_x)
       , n_p_mesh_y(n_pmesh_y)
       , n_colors_x(colors_x)

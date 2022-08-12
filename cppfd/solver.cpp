@@ -691,13 +691,13 @@ void Solver::predict_velocity(){
 void Solver::MPI_predict_velocity(){
   Kokkos::View<double*[2]> v_star("predicted velocity", this->mesh_chunk->get_n_points_x() * this->mesh_chunk->get_n_points_y());
 
-  // Get the number of processes
-  int p;
-  MPI_Comm_size(MPI_COMM_WORLD, &p);
-
-  // Get process rank
-  int world_rank;
-  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  // // Get the number of processes
+  // int p;
+  // MPI_Comm_size(MPI_COMM_WORLD, &p);
+  //
+  // // Get process rank
+  // int world_rank;
+  // MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
 }
 
