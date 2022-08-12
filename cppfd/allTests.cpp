@@ -4,9 +4,9 @@
 #include <Kokkos_Core.hpp>
 #include <gtest/gtest.h>
 
-#include "mesh_chunk.cpp"
-#include "boundary_conditions.cpp"
-#include "solver.cpp"
+#include "mesh_chunk.h"
+#include "boundary_conditions.h"
+#include "solver.h"
 
 struct solver_test : testing::Test{
   std::unique_ptr<Solver> solver;
