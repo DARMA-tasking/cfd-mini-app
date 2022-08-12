@@ -3,7 +3,7 @@ ARG arch=amd64
 FROM ${arch}/ubuntu:22.04 as base
 
 ARG proxy=""
-ARG compiler=clang-9
+ARG compiler=clang-14
 
 ENV https_proxy=${proxy} \
     http_proxy=${proxy}
