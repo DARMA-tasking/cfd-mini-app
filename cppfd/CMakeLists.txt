@@ -9,6 +9,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Setting options
 option(OUTPUT_VTK_FILES "When OFF allows for a non-VTK build" OFF)
+option(USE_MPI "When OFF allows for a non-MPI build" OFF)
 
 # Find required dependencies
 find_package(Kokkos REQUIRED)
@@ -16,6 +17,10 @@ find_package(KokkosKernels REQUIRED)
 
 if(OUTPUT_VTK_FILES)
   find_package(VTK REQUIRED COMPONENTS vtkCommonCore vtkIOXML)
+endif()
+
+if(USE_MPI)
+  find_package(MPI REQUIRED)
 endif()
 
 find_package(GTest CONFIG REQUIRED)
@@ -40,10 +45,22 @@ add_executable(allTests allTests.cpp)
 message(STATUS "VTK libraries: ${VTK_LIBRARIES}")
 
 # Link targets to libraries
-target_link_libraries(mesh_chunk Kokkos::kokkos ${VTK_LIBRARIES})
-target_link_libraries(parallel_mesh Kokkos::kokkos ${VTK_LIBRARIES})
+if (${USE_MPI} AND MPI_FOUND)
+    MESSAGE(STATUS "MPI found. Enabling MPI.")
+    target_link_libraries(mesh_chunk MPI::MPI_CXX)
+    target_link_libraries(parallel_mesh MPI::MPI_CXX)
+    target_link_libraries(boundary_conditions MPI::MPI_CXX)
+    target_link_libraries(solver MPI::MPI_CXX)
+    target_link_libraries(test MPI::MPI_CXX)
+    target_link_libraries(parallel_test MPI::MPI_CXX)
+    target_link_libraries(allTests MPI::MPI_CXX)
+elseif(${USE_MPI} AND NOT MPI_FOUND)
+    MESSAGE(WARNING "MPI not found. Disabling MPI.")
+endif()
+target_link_libraries(mesh_chunk boundary_conditions Kokkos::kokkos ${VTK_LIBRARIES})
+target_link_libraries(parallel_mesh mesh_chunk Kokkos::kokkos ${VTK_LIBRARIES})
 target_link_libraries(boundary_conditions Kokkos::kokkos ${VTK_LIBRARIES})
-target_link_libraries(solver Kokkos::kokkos Kokkos::kokkoskernels  ${VTK_LIBRARIES})
-target_link_libraries(test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
-target_link_libraries(parallel_test Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
-target_link_libraries(allTests Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES} GTest::gtest)
+target_link_libraries(solver parallel_mesh Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
+target_link_libraries(test solver mesh_chunk Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
+target_link_libraries(parallel_test solver Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES})
+target_link_libraries(allTests solver parallel_mesh Kokkos::kokkos Kokkos::kokkoskernels ${VTK_LIBRARIES} GTest::gtest)

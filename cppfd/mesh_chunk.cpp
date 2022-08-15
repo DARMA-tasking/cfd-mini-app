@@ -146,6 +146,29 @@ get_pressure(uint64_t i, uint64_t j) const{
   else
     return this->pressure(k);
 }
+
+#ifdef USE_MPI
+void MeshChunk::
+mpi_send_border_velocity_x(double border_velocity_x, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border) {
+	MPI_Send(&border_velocity_x, 1, MPI_DOUBLE, dest_rank, border, MPI_COMM_WORLD);
+}
+
+void MeshChunk::
+mpi_send_border_velocity_y(double border_velocity_y, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border) {
+	MPI_Send(&border_velocity_y, 1, MPI_DOUBLE, dest_rank, border, MPI_COMM_WORLD);
+}
+
+void MeshChunk::
+mpi_receive_border_velocity_x(double border_velocity_x, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border, MPI_Status status) {
+	MPI_Recv(&border_velocity_x, 1, MPI_DOUBLE, dest_rank, border, MPI_COMM_WORLD, &status);
+}
+
+void MeshChunk::
+mpi_receive_border_velocity_y(double border_velocity_y, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border, MPI_Status status) {
+	MPI_Recv(&border_velocity_y, 1, MPI_DOUBLE, dest_rank, border, MPI_COMM_WORLD, &status);
+}
+#endif
+
 #ifdef OUTPUT_VTK_FILES
 vtkSmartPointer<vtkUniformGrid> MeshChunk::
 make_VTK_uniform_grid() const{

@@ -7,20 +7,24 @@
 
 #include <Kokkos_Core.hpp>
 
+#ifdef USE_MPI
+#include <mpi.h>
+#endif
+
 #ifdef OUTPUT_VTK_FILES
 #include <vtkSmartPointer.h>
 #endif
 
 enum struct PointIndexEnum : int8_t {
-  CORNER_0 = 0,
-  CORNER_1 = 1,
-  CORNER_2 = 2,
-  CORNER_3 = 3,
-  EDGE_0 = 4,
-  EDGE_1 = 5,
-  EDGE_2 = 6,
-  EDGE_3 = 7,
-  INTERIOR = 8
+  CORNER_0 = 0, // Bottom Left
+  CORNER_1 = 1, // Bottom Right
+  CORNER_2 = 2, // Top Right
+  CORNER_3 = 3, // Top Left
+  EDGE_0 = 4, // Bottom
+  EDGE_1 = 5, // Right
+  EDGE_2 = 6, // Top
+  EDGE_3 = 7, // Left
+  INTERIOR = 8 // Interior
 };
 
 enum struct PointTypeEnum : int8_t {
@@ -29,6 +33,13 @@ enum struct PointTypeEnum : int8_t {
   SHARED_OWNED = 2,
   GHOST = 3,
   INVALID = 4
+};
+
+enum struct Border : int8_t {
+  BOTTOM = 0,
+  LEFT = 1,
+  RIGHT = 2,
+  TOP = 3
 };
 
 #ifdef OUTPUT_VTK_FILES
@@ -69,6 +80,16 @@ class MeshChunk
 
     // setter to assign new mesh cell data
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
+
+    #ifdef USE_MPI
+    // mpi sends to other mesh chunk
+    void mpi_send_border_velocity_x(double border_velocity_x, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border);
+    void mpi_send_border_velocity_y(double border_velocity_y, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border);
+
+    // mpi receive from other mesh chunk
+    void mpi_receive_border_velocity_x(double border_velocity_x, uint64_t pos_x, uint64_t pos_y, uint64_t source_rank, uint8_t border, MPI_Status status);
+    void mpi_receive_border_velocity_y(double border_velocity_y, uint64_t pos_x, uint64_t pos_y, uint64_t source_rank, uint8_t border, MPI_Status status);
+    #endif
 
     // converter to VTK uniform grid
     #ifdef OUTPUT_VTK_FILES

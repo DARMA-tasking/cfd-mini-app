@@ -10,13 +10,28 @@
 #include <Kokkos_ArithTraits.hpp>
 #include <KokkosSparse_CrsMatrix.hpp>
 
-#include "mesh_chunk.h"
+//#include "mesh_chunk.h"
 #include "boundary_conditions.h"
+#include "parallel_mesh.h"
 
 class Solver
 {
   public:
-  Solver(std::shared_ptr<MeshChunk> m, BoundaryConditions& b_c, double d_t, double t_f, double r, double d_v, double m_C, int v)
+  Solver(std::shared_ptr<MeshChunk> m,
+      BoundaryConditions& b_c,
+      double d_t,
+      double t_f,
+      double r,
+      double d_v,
+      double m_C,
+      int v,
+      uint64_t domain_size_x,
+      uint64_t domain_size_y,
+      double cell_size,
+      uint64_t n_pmesh_x,
+      uint64_t n_pmesh_y,
+      uint64_t colors_x,
+      uint64_t colors_y)
       : mesh_chunk(m)
       , boundary_conditions(b_c)
       , delta_t(d_t)
@@ -25,6 +40,14 @@ class Solver
       , max_C(m_C)
       , verbosity(v)
       , nu(d_v / r)
+      , domain_size_x(domain_size_x)
+      , domain_size_y(domain_size_y)
+      , h(cell_size)
+      , p(n_pmesh_x * n_pmesh_y)
+      , n_p_mesh_x(n_pmesh_x)
+      , n_p_mesh_y(n_pmesh_y)
+      , n_colors_x(colors_x)
+      , n_colors_y(colors_y)
     {}
 
     // provide stopping points for debugging purposes
@@ -59,7 +82,19 @@ class Solver
     // main solver routine
     void solve(stopping_point s_p = stopping_point::NONE, linear_solver l_s = linear_solver::GAUSS_SEIDEL, adaptative_time_step ats = adaptative_time_step::OFF);
 
+    // global vtk file export
+    uint64_t write_vtms(const std::string&) const;
+
   private:
+    // assemble parallel meshes that will be used depending on number of ranks
+    void assemble_parallel_meshes();
+
+    // set mesh chunk border types depending on their position in the global and parallel mesh
+    void set_mesh_chunk_borders();
+
+    // assign existing mesh chunk to new parallel mesh
+    void assign_mesh_chunk_to_parallel_mesh(uint64_t i, uint64_t j);
+
     // assemble Laplacian matrix for Poisson solver and return density
     double assemble_Laplacian();
 
@@ -75,6 +110,9 @@ class Solver
 
     // compute predicted velocities without pressure term
     void predict_velocity();
+
+    // compute predicted velocities without pressure term using MPI
+    void MPI_predict_velocity();
 
     // build poisson equation right hand side vector
     void assemble_poisson_RHS();
@@ -100,9 +138,19 @@ class Solver
     // reference to mesh onto which solve is performed
     std::shared_ptr<MeshChunk> mesh_chunk;
 
+    // storage for parallel meshes
+    std::map<std::array<uint64_t, 2>, ParallelMesh> parallel_meshes = {};
+
     // store Kokkos kernels zero and unit values
     double zero = Kokkos::ArithTraits<double>::zero();
     double one = Kokkos::ArithTraits<double>::one();
+
+    // parallel mesh variables
+    uint64_t p = 1;
+    uint64_t n_p_mesh_x = 1;
+    uint64_t n_p_mesh_y = 1;
+    uint64_t n_colors_x = 1;
+    uint64_t n_colors_y = 1;
 
     // default physics variable values
     double nu = 0.0008;
@@ -111,6 +159,11 @@ class Solver
     double t_final = 0.001;
     double max_C = 0.5;
     double Re = 100;
+
+    // parallel mesh variables
+    uint64_t domain_size_x;
+    uint64_t domain_size_y;
+    double h = 1.;
 
     // default verbosity level
     int verbosity = 1;

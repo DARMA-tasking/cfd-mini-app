@@ -5,10 +5,10 @@
 
 #include <Kokkos_Core.hpp>
 
-#include "mesh_chunk.cpp"
-#include "parallel_mesh.cpp"
-#include "boundary_conditions.cpp"
-#include "solver.cpp"
+#include "mesh_chunk.h"
+#include "parallel_mesh.h"
+#include "boundary_conditions.h"
+#include "solver.h"
 
 int main(int argc, char** argv) {
   // handle Kokkos boilerplate
@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   // create parallel mesh
   uint64_t n_p = 3;
   uint64_t n_q = 2;
-  ParallelMesh p_mesh(n_c_x, n_c_y, cell_size , n_p, n_q);
+  ParallelMesh p_mesh(n_c_x, n_c_y, cell_size, 8, n_p, n_q);
 
   // check partition of cells
   std::map<std::array<uint64_t,2>, uint64_t> c_per_block = {};
