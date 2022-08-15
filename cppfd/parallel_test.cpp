@@ -5,10 +5,10 @@
 
 #include <Kokkos_Core.hpp>
 
-#include "mesh_chunk.cpp"
-#include "parallel_mesh.cpp"
-#include "boundary_conditions.cpp"
-#include "solver.cpp"
+#include "mesh_chunk.h"
+#include "parallel_mesh.h"
+#include "boundary_conditions.h"
+#include "solver.h"
 
 int main(int argc, char** argv) {
   // handle Kokkos boilerplate
