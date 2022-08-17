@@ -17,10 +17,15 @@
 MeshChunk::
 MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
 	  const std::map<PointIndexEnum, PointTypeEnum>& point_types,
+    uint64_t n_ch_glob_x, uint64_t n_ch_glob_y,
+    uint64_t chunk_position_global_x, uint64_t chunk_position_global_y,
 	  double o_x, double o_y)
   : n_cells_x(n_x)
   , n_cells_y(n_y)
   , h(cell_size)
+  , n_chunks_global_x(n_ch_glob_x)
+  , n_chunks_global_y(n_ch_glob_y)
+  , global_position({chunk_position_global_x, chunk_position_global_y})
   , origin({o_x, o_y}){
 
   // instantiate internal containers
@@ -145,6 +150,37 @@ get_pressure(uint64_t i, uint64_t j) const{
     return std::nan("");
   else
     return this->pressure(k);
+}
+
+void MeshChunk::apply_velocity_bc(std::map<std::string, double> velocity_values){
+  // left side
+  if(this->get_global_position()[0] == 0){
+    for(uint64_t j = 0; j < this->get_n_points_y() + 1; j++){
+      this->set_velocity_x(0, j, velocity_values["v_x_l"]);
+      this->set_velocity_y(0, j, velocity_values["v_y_l"]);
+    }
+  }
+  // right side
+  else if(this->get_global_position()[0] == this->n_chunks_global_x - 1){
+    for(uint64_t j = 0; j < this->get_n_points_y() + 1; j++){
+      this->set_velocity_x(this->get_n_points_x() - 1, j, velocity_values["v_x_r"]);
+      this->set_velocity_y(this->get_n_points_x() - 1, j, velocity_values["v_y_r"]);
+    }
+  }
+  // bottom side
+  if(this->get_global_position()[1] == 0){
+    for(uint64_t i = 0; i < this->get_n_points_x() + 1; i++){
+      this->set_velocity_x(i, 0, velocity_values["v_x_b"]);
+      this->set_velocity_y(i, 0, velocity_values["v_y_b"]);
+    }
+  }
+  // top side
+  else if(this->get_global_position()[1] == this->n_chunks_global_y - 1){
+    for(uint64_t i = 0; i < this->get_n_points_x() + 1; i++){
+      this->set_velocity_x(i, this->get_n_points_y() - 1, velocity_values["v_x_t"]);
+      this->set_velocity_y(i, this->get_n_points_y() - 1, velocity_values["v_y_t"]);
+    }
+  }
 }
 
 #ifdef USE_MPI

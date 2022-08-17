@@ -95,6 +95,9 @@ class Solver
     // assign existing mesh chunk to new parallel mesh
     void assign_mesh_chunk_to_parallel_mesh(uint64_t i, uint64_t j);
 
+    // apply boundary conditions globally
+    void apply_velocity_bc(std::map<std::string, double> velocity_values);
+
     // assemble Laplacian matrix for Poisson solver and return density
     double assemble_Laplacian();
 

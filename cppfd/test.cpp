@@ -21,10 +21,10 @@ int main(int argc, char** argv) {
   double max_C = 0.5;
   uint64_t n_c_x = 32;
   uint64_t n_c_y = 32;
-  uint64_t n_parallel_meshes_x = 1;
-  uint64_t n_parallel_meshes_y = 1;
-  uint64_t n_colors_x = 1;
-  uint64_t n_colors_y = 1;
+  uint64_t n_parallel_meshes_x = 4;
+  uint64_t n_parallel_meshes_y = 4;
+  uint64_t n_colors_x = 2;
+  uint64_t n_colors_y = 2;
   std::cout << "Input parameters:"
 	    << "\n  density: " << density
 	    << "\n  dynamic viscosity: " << dynamic_viscosity
@@ -50,7 +50,8 @@ int main(int argc, char** argv) {
     {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
   };
   auto mesh = std::make_shared<MeshChunk>
-    (n_c_x, n_c_y, cell_size, point_types);
+    (n_c_x, n_c_y, cell_size, point_types,
+    n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {

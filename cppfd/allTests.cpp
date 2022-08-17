@@ -37,7 +37,8 @@ struct solver_test : testing::Test{
       {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
     };
     auto mesh = std::make_shared<MeshChunk>
-      (n_cells, n_cells, 1. / n_cells, point_types);
+      (n_cells, n_cells, 1. / n_cells, point_types,
+      n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {

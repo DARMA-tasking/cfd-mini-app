@@ -51,6 +51,8 @@ class MeshChunk
   public:
     MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
 	      const std::map<PointIndexEnum, PointTypeEnum>& point_types,
+        uint64_t n_ch_glob_x, uint64_t n_ch_glob_y,
+        uint64_t chunk_position_global_x = 0, uint64_t chunk_position_global_y = 0,
 	      double o_x = 0., double o_y = 0.);
 
     // only getters for unchangeable mesh characteristics
@@ -59,7 +61,8 @@ class MeshChunk
     uint64_t get_n_points_x() const { return this->n_cells_x + 1; }
     uint64_t get_n_points_y() const { return this->n_cells_y + 1; }
     double get_cell_size() const { return this->h; }
-    std::array<double,2> get_origin() const {return this->origin; }
+    std::array<double, 2> get_origin() const {return this->origin; }
+    std::array<uint64_t, 2> get_global_position() const {return this->global_position; }
 
     // coordinate systems converters
     std::array<uint64_t,2> index_to_Cartesian(uint64_t k, uint64_t n, uint64_t nmax) const;
@@ -81,6 +84,9 @@ class MeshChunk
     // setter to assign new mesh cell data
     void set_pressure(Kokkos::View<double*> p) { this->pressure = p; }
 
+    // apply velocity boundary conditions to mesh chunk points
+    void apply_velocity_bc(std::map<std::string, double> velocity_values);
+
     #ifdef USE_MPI
     // mpi sends to other mesh chunk
     void mpi_send_border_velocity_x(double border_velocity_x, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border);
@@ -100,12 +106,19 @@ class MeshChunk
     std::string write_vti(const std::string& file_name) const;
 
   private:
+    // location of mesh chunk in global domain
+    std::array<uint64_t, 2> global_position;
+
     // physical origin of the mesh block
     std::array<double,2> origin;
 
     // characteristic dimensions of the mesh
     uint64_t n_cells_x;
     uint64_t n_cells_y;
+
+    // global characteristics
+    uint64_t n_chunks_global_x;
+    uint64_t n_chunks_global_y;
 
     // physical cell size
     double h = 1.;

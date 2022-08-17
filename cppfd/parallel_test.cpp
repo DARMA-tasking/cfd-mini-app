@@ -38,7 +38,7 @@ int main(int argc, char** argv) {
   // create parallel mesh
   uint64_t n_p = 3;
   uint64_t n_q = 2;
-  ParallelMesh p_mesh(n_c_x, n_c_y, cell_size, 8, n_p, n_q);
+  ParallelMesh p_mesh(n_c_x, n_c_y, cell_size, n_p, n_q, 15, n_c_x, n_c_y);
 
   // check partition of cells
   std::map<std::array<uint64_t,2>, uint64_t> c_per_block = {};

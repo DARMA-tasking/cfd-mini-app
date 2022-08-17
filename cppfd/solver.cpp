@@ -34,6 +34,16 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   if(this->verbosity >= 1){
     std::cout << "Applying velocity boundary conditions..." << std::endl;
   }
+  // this->apply_velocity_bc(std::map<std::string, double>{
+  //   {"v_x_t", 1.0},
+  //   {"v_y_t", 1.0},
+  //   {"v_x_b", 1.0},
+  //   {"v_y_b", 1.0},
+  //   {"v_x_l", 1.0},
+  //   {"v_y_l", 1.0},
+  //   {"v_x_r", 1.0},
+  //   {"v_y_r", 1.0}
+  // });
   this->boundary_conditions.apply_velocity_bc();
   if(s_p == stopping_point::AFTER_BOUNDARY_CONDITION){
     for(int j = 0; j < this->mesh_chunk->get_n_points_y(); j++){
@@ -245,6 +255,12 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   #endif
 }
 
+void Solver::apply_velocity_bc(std::map<std::string, double> velocity_values){
+  for (auto& it_parallel_meshes : this->parallel_meshes){
+    it_parallel_meshes.second.apply_velocity_bc(velocity_values);
+  }
+}
+
 void Solver::assemble_parallel_meshes(){
   uint64_t n_x;
   uint64_t n_y;
@@ -252,6 +268,8 @@ void Solver::assemble_parallel_meshes(){
   uint16_t n_q = this->n_colors_y;
   double o_x = 0.;
   double o_y = 0.;
+  uint64_t global_position_x = 0;
+  uint64_t global_position_y = 0;
 
   uint64_t n_cells_p_mesh_x = this->domain_size_x / this->n_p_mesh_x;
   uint64_t n_cells_p_mesh_y = this->domain_size_y / this->n_p_mesh_y;
@@ -296,8 +314,12 @@ void Solver::assemble_parallel_meshes(){
         this->parallel_meshes.emplace
           (std::piecewise_construct,
           std::forward_as_tuple(std::array<uint64_t,2>{0, ky}),
-          std::forward_as_tuple(n_cells_p_mesh_x, n_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+          std::forward_as_tuple(n_cells_p_mesh_x, n_y, this->h, n_p, n_q, p_mesh_border,
+                                (this->n_p_mesh_x * this->n_colors_x),
+                                (this->n_p_mesh_y * this->n_colors_y),
+                                0, ky, o_x, o_y));
 
+        global_position_y++;
         o_y += n_y * this->h;
       }
     }
@@ -332,13 +354,18 @@ void Solver::assemble_parallel_meshes(){
         this->parallel_meshes.emplace
           (std::piecewise_construct,
           std::forward_as_tuple(std::array<uint64_t,2>{kx, 0}),
-          std::forward_as_tuple(n_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+          std::forward_as_tuple(n_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
+                                (this->n_p_mesh_x * this->n_colors_x),
+                                (this->n_p_mesh_y * this->n_colors_y),
+                                kx, 0, o_x, o_y));
 
+        global_position_x++;
         o_x += n_x * this->h;
       }
     }
     else{
       for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
+        global_position_x = 0;
         o_x = 0;
         r_x = remainder_x;
         n_y = n_cells_p_mesh_y;
@@ -399,9 +426,14 @@ void Solver::assemble_parallel_meshes(){
           this->parallel_meshes.emplace
             (std::piecewise_construct,
             std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-            std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+            std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, p_mesh_border,
+                                  (this->n_p_mesh_x * this->n_colors_x),
+                                  (this->n_p_mesh_y * this->n_colors_y),
+                                  kx, ky, o_x, o_y));
+          global_position_x++;
           o_x += n_x * this->h;
         }
+        global_position_y++;
         o_y += n_y * this->h;
       }
     }
@@ -413,7 +445,10 @@ void Solver::assemble_parallel_meshes(){
       this->parallel_meshes.emplace
         (std::piecewise_construct,
         std::forward_as_tuple(std::array<uint64_t,2>{0, 0}),
-        std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, static_cast<int>(LocationIndexEnum::SINGLE), o_x, o_y));
+        std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, static_cast<int>(LocationIndexEnum::SINGLE),
+                              (this->n_p_mesh_x * this->n_colors_x),
+                              (this->n_p_mesh_y * this->n_colors_y),
+                              0, 0, 0, 0));
     }
     // case where there is only one column of parallel meshes
     else if((this->n_p_mesh_x == 1) && (this->n_p_mesh_y != 1)){
@@ -440,8 +475,12 @@ void Solver::assemble_parallel_meshes(){
         this->parallel_meshes.emplace
           (std::piecewise_construct,
           std::forward_as_tuple(std::array<uint64_t,2>{0, ky}),
-          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
+                                (this->n_p_mesh_x * this->n_colors_x),
+                                (this->n_p_mesh_y * this->n_colors_y),
+                                0, ky, o_x, o_y));
 
+        global_position_y++;
         o_y += n_cells_p_mesh_y * this->h;
       }
     }
@@ -470,13 +509,18 @@ void Solver::assemble_parallel_meshes(){
         this->parallel_meshes.emplace
           (std::piecewise_construct,
           std::forward_as_tuple(std::array<uint64_t,2>{kx, 0}),
-          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
+                                (this->n_p_mesh_x * this->n_colors_x),
+                                (this->n_p_mesh_y * this->n_colors_y),
+                                kx, 0, o_x, o_y));
 
+        global_position_x++;
         o_x += n_cells_p_mesh_x * this->h;
       }
     }
     else {
       for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
+        global_position_x = 0;
         o_x = 0;
         for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
 
@@ -525,10 +569,16 @@ void Solver::assemble_parallel_meshes(){
           this->parallel_meshes.emplace
             (std::piecewise_construct,
             std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-            std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border, o_x, o_y));
+            std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
+                                  (this->n_p_mesh_x * this->n_colors_x),
+                                  (this->n_p_mesh_y * this->n_colors_y),
+                                  kx, ky,
+                                  o_x, o_y));
 
+          global_position_x++;
           o_x += n_cells_p_mesh_x * this->h;
         }
+        global_position_y++;
         o_y += n_cells_p_mesh_y * this->h;
       }
     }

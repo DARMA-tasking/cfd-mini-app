@@ -16,19 +16,22 @@ const uint64_t uint64_nan = static_cast<uint64_t>(-1);
 
 ParallelMesh::
 ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
-			   uint16_t n_p, uint16_t n_q, int8_t border,
-			   double o_x, double o_y)
-  : n_cells_x(n_x)
-  , n_cells_y(n_y)
-  , n_blocks_x(n_p)
-  , n_blocks_y(n_q)
-  , h(cell_size)
-  , origin({o_x, o_y})
-  , q_x (n_x / n_p)
-  , q_y (n_y / n_q)
-  , r_x (n_x % n_p)
-  , r_y (n_y % n_q)
-	, location_type(border){
+     uint16_t n_p, uint16_t n_q, int8_t border,
+     uint64_t n_chunks_glob_x, uint64_t n_chunks_glob_y,
+     uint64_t glob_position_x, uint64_t glob_position_y,
+     double o_x, double o_y)
+    : n_cells_x(n_x)
+    , n_cells_y(n_y)
+    , n_chunks_x(n_p)
+    , n_chunks_y(n_q)
+    , h(cell_size)
+    , global_position({glob_position_x, glob_position_y})
+    , origin({o_x, o_y})
+    , q_x (n_x / n_p)
+    , q_y (n_y / n_q)
+    , r_x (n_x % n_p)
+    , r_y (n_y % n_q)
+    , location_type(border){
 
   // Compute cutoff between wide and narrow blocks
   this->cutoff_x = this->r_x * (this->q_x + 1);
@@ -49,237 +52,240 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
 
       // create default mesh chunk boundary point types
       std::map<PointIndexEnum, PointTypeEnum> pt = {
-	{PointIndexEnum::CORNER_0, PointTypeEnum::GHOST},
-	{PointIndexEnum::CORNER_2, PointTypeEnum::SHARED_OWNED},
-	{PointIndexEnum::CORNER_1, PointTypeEnum::GHOST},
-	{PointIndexEnum::CORNER_3, PointTypeEnum::GHOST},
-	{PointIndexEnum::EDGE_0, PointTypeEnum::GHOST},
-	{PointIndexEnum::EDGE_1, PointTypeEnum::SHARED_OWNED},
-	{PointIndexEnum::EDGE_2, PointTypeEnum::SHARED_OWNED},
-	{PointIndexEnum::EDGE_3, PointTypeEnum::GHOST},
-	{PointIndexEnum::INTERIOR, PointTypeEnum::INTERIOR}
+        {PointIndexEnum::CORNER_0, PointTypeEnum::GHOST},
+        {PointIndexEnum::CORNER_2, PointTypeEnum::SHARED_OWNED},
+        {PointIndexEnum::CORNER_1, PointTypeEnum::GHOST},
+        {PointIndexEnum::CORNER_3, PointTypeEnum::GHOST},
+        {PointIndexEnum::EDGE_0, PointTypeEnum::GHOST},
+        {PointIndexEnum::EDGE_1, PointTypeEnum::SHARED_OWNED},
+        {PointIndexEnum::EDGE_2, PointTypeEnum::SHARED_OWNED},
+        {PointIndexEnum::EDGE_3, PointTypeEnum::GHOST},
+        {PointIndexEnum::INTERIOR, PointTypeEnum::INTERIOR}
       };
 
       // override outer boundary point types when applicable
       switch (this->get_location_type()) {
         case static_cast<int>(LocationIndexEnum::BOTTOM):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::RIGHT):
-					if (p == n_p - 1)
-			pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::TOP):
-					if (q == n_q - 1)
-			pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::LEFT):
-					if (p == 0)
-			pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::BOTTOM_L):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
-					if (p == 0)
-			pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::BOTTOM_R):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
-					if (p == n_p - 1)
-			pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::TOP_R):
-					if (p == n_p - 1)
-			pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
-					if (q == n_q - 1)
-			pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::TOP_L):
-					if (q == n_q - 1)
-			pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
-					if (p == 0)
-			pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
           break;
 
         case static_cast<int>(LocationIndexEnum::INTERIOR):
-					// this case uses default mesh chunk boundary types
+          // this case uses default mesh chunk boundary types
           break;
 
         case static_cast<int>(LocationIndexEnum::SINGLE):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
-					if (p == n_p - 1)
-			pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
-					if (q == n_q - 1)
-			pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
-					if (p == 0)
-			pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
-					break;
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
+          break;
 
-				case static_cast<int>(LocationIndexEnum::VERT_BAR_TOP):
-					if (p == n_p - 1)
-				pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
-					if (q == n_q - 1)
-				pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
-					if (p == 0)
-				pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
-					break;
+        case static_cast<int>(LocationIndexEnum::VERT_BAR_TOP):
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
+          break;
 
-				case static_cast<int>(LocationIndexEnum::VERT_BAR_MID):
-					if (p == n_p - 1)
-				pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
-					if (p == 0)
-				pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
-					break;
+        case static_cast<int>(LocationIndexEnum::VERT_BAR_MID):
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
+          break;
 
-				case static_cast<int>(LocationIndexEnum::VERT_BAR_BOT):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
-					if (p == n_p - 1)
-			pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
-					if (p == 0)
-			pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
-					break;
+        case static_cast<int>(LocationIndexEnum::VERT_BAR_BOT):
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
+          break;
 
-				case static_cast<int>(LocationIndexEnum::HORIZ_BAR_L):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
-					if (q == n_q - 1)
-			pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
-					if (p == 0)
-			pt[PointIndexEnum::EDGE_3]
-				= pt[PointIndexEnum::CORNER_3]
-				= pt[PointIndexEnum::CORNER_0]
-				= PointTypeEnum::BOUNDARY;
-					break;
+        case static_cast<int>(LocationIndexEnum::HORIZ_BAR_L):
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
+          if (p == 0)
+          pt[PointIndexEnum::EDGE_3]
+          = pt[PointIndexEnum::CORNER_3]
+          = pt[PointIndexEnum::CORNER_0]
+          = PointTypeEnum::BOUNDARY;
+          break;
 
-				case static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
-					if (q == n_q - 1)
-			pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
-				break;
+        case static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID):
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
+          break;
 
-				case static_cast<int>(LocationIndexEnum::HORIZ_BAR_R):
-					if (q == 0)
-			pt[PointIndexEnum::EDGE_0]
-				= pt[PointIndexEnum::CORNER_0]
-				= pt[PointIndexEnum::CORNER_1]
-				= PointTypeEnum::BOUNDARY;
-					if (p == n_p - 1)
-			pt[PointIndexEnum::EDGE_1]
-				= pt[PointIndexEnum::CORNER_1]
-				= pt[PointIndexEnum::CORNER_2]
-				= PointTypeEnum::BOUNDARY;
-					if (q == n_q - 1)
-			pt[PointIndexEnum::EDGE_2]
-				= pt[PointIndexEnum::CORNER_2]
-				= pt[PointIndexEnum::CORNER_3]
-				= PointTypeEnum::BOUNDARY;
-					break;
+        case static_cast<int>(LocationIndexEnum::HORIZ_BAR_R):
+          if (q == 0)
+          pt[PointIndexEnum::EDGE_0]
+          = pt[PointIndexEnum::CORNER_0]
+          = pt[PointIndexEnum::CORNER_1]
+          = PointTypeEnum::BOUNDARY;
+          if (p == n_p - 1)
+          pt[PointIndexEnum::EDGE_1]
+          = pt[PointIndexEnum::CORNER_1]
+          = pt[PointIndexEnum::CORNER_2]
+          = PointTypeEnum::BOUNDARY;
+          if (q == n_q - 1)
+          pt[PointIndexEnum::EDGE_2]
+          = pt[PointIndexEnum::CORNER_2]
+          = pt[PointIndexEnum::CORNER_3]
+          = PointTypeEnum::BOUNDARY;
+          break;
 
         default:
           break;
       }
 
-      // append new mesh block to existing ones
+      // append new mesh chunk to existing ones
        this->mesh_chunks.emplace
-	(std::piecewise_construct,
-	 std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
-	 std::forward_as_tuple(m, n, this->h, pt, o_x, o_y));
+          (std::piecewise_construct,
+           std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
+           std::forward_as_tuple(m, n, this->h, pt, n_chunks_glob_x, n_chunks_glob_y,
+                                p + this->n_chunks_x * this->global_position[0],
+                                q + this->n_chunks_y * this->global_position[1],
+                                o_x, o_y));
 
       // slide horizontal origin rightward
       o_x += m * this->h;
@@ -361,7 +367,7 @@ LocalToGlobalCellIndices(const LocalCoordinates& loc) const{
   uint64_t i = loc.local[0];
   uint64_t j = loc.local[1];
   if (p < 0 || q < 0 || i < 0 || j < 0
-      || p >= this->n_blocks_x || q >= this->n_blocks_y)
+      || p >= this->n_chunks_x || q >= this->n_chunks_y)
     return {uint64_nan, uint64_nan};
 
   // compute X-axis global coordinate
@@ -412,7 +418,7 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
   uint64_t i = loc.local[0];
   uint64_t j = loc.local[1];
   if (p < 0 || q < 0 || i < 0 || j < 0
-      || p >= this->n_blocks_x || q >= this->n_blocks_y)
+      || p >= this->n_chunks_x || q >= this->n_chunks_y)
     return {uint64_nan, uint64_nan};
 
   // compute X-axis global coordinate
@@ -453,6 +459,12 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
 
   // return valid indices
   return {m, n};
+}
+
+void ParallelMesh::apply_velocity_bc(std::map<std::string, double> velocity_values) {
+  for (auto& it_mesh_chunks : this->mesh_chunks){
+    it_mesh_chunks.second.apply_velocity_bc(velocity_values);
+  }
 }
 
 #ifdef OUTPUT_VTK_FILES
