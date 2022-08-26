@@ -21,10 +21,10 @@ int main(int argc, char** argv) {
   double max_C = 0.5;
   uint64_t n_c_x = 32;
   uint64_t n_c_y = 32;
-  uint64_t n_parallel_meshes_x = 4;
-  uint64_t n_parallel_meshes_y = 4;
-  uint64_t n_colors_x = 2;
-  uint64_t n_colors_y = 2;
+  uint64_t n_parallel_meshes_x = 1;
+  uint64_t n_parallel_meshes_y = 1;
+  uint64_t n_colors_x = 1;
+  uint64_t n_colors_y = 1;
   std::cout << "Input parameters:"
 	    << "\n  density: " << density
 	    << "\n  dynamic viscosity: " << dynamic_viscosity
@@ -50,7 +50,7 @@ int main(int argc, char** argv) {
     {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
   };
   auto mesh = std::make_shared<MeshChunk>
-    (n_c_x, n_c_y, cell_size, point_types,
+    (nullptr, n_c_x, n_c_y, cell_size, point_types,
     n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
 
   // define boundary conditions
@@ -67,8 +67,8 @@ int main(int argc, char** argv) {
   BoundaryConditions b_c(mesh, velocity_values);
 
   // run numerical scheme
-  Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1, n_c_x, n_c_y, cell_size, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
-  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
+  Solver solver(mesh, velocity_values, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1, n_c_x, n_c_y, cell_size, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
+  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::OFF);
 
   #ifdef OUTPUT_VTK_FILES
   // save results

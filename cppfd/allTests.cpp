@@ -37,7 +37,7 @@ struct solver_test : testing::Test{
       {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
     };
     auto mesh = std::make_shared<MeshChunk>
-      (n_cells, n_cells, 1. / n_cells, point_types,
+      (nullptr, n_cells, n_cells, 1. / n_cells, point_types,
       n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
 
     // define boundary conditions
@@ -55,7 +55,7 @@ struct solver_test : testing::Test{
 
     // instantiate solver
     this->solver = std::make_unique<Solver>
-      (mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0, 25, 25, 1, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
+      (mesh, velocity_values, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0, 25, 25, 1, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
   }
 };
 

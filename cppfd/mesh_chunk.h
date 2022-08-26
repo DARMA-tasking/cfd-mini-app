@@ -42,6 +42,7 @@ enum struct Border : int8_t {
   TOP = 3
 };
 
+class ParallelMesh;
 #ifdef OUTPUT_VTK_FILES
 class vtkUniformGrid;
 #endif
@@ -49,7 +50,7 @@ class vtkUniformGrid;
 class MeshChunk
 {
   public:
-    MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
+    MeshChunk(ParallelMesh* pp_mesh, uint64_t n_x, uint64_t n_y, double cell_size,
 	      const std::map<PointIndexEnum, PointTypeEnum>& point_types,
         uint64_t n_ch_glob_x, uint64_t n_ch_glob_y,
         uint64_t chunk_position_global_x = 0, uint64_t chunk_position_global_y = 0,
@@ -75,8 +76,8 @@ class MeshChunk
     double get_pressure(uint64_t i, uint64_t j) const;
     void set_velocity_x(uint64_t i, uint64_t j, double u);
     void set_velocity_y(uint64_t i, uint64_t j, double v);
-    double get_velocity_x(uint64_t i, uint64_t j) const;
-    double get_velocity_y(uint64_t i, uint64_t j) const;
+    double get_velocity_x(int64_t i, int64_t j);
+    double get_velocity_y(int64_t i, int64_t j);
 
     // setter to assign new mesh point data
     void set_velocity(Kokkos::View<double**[2]> v) { this->velocity = v; }
@@ -86,6 +87,9 @@ class MeshChunk
 
     // apply velocity boundary conditions to mesh chunk points
     void apply_velocity_bc(std::map<std::string, double> velocity_values);
+
+    // predict velocity for points in mesh chunk
+    void chunk_predict_velocity(double delta_t, double nu);
 
     #ifdef USE_MPI
     // mpi sends to other mesh chunk
@@ -106,6 +110,9 @@ class MeshChunk
     std::string write_vti(const std::string& file_name) const;
 
   private:
+    // parent parallel mesh
+    ParallelMesh* parent_parallel_mesh;
+
     // location of mesh chunk in global domain
     std::array<uint64_t, 2> global_position;
 

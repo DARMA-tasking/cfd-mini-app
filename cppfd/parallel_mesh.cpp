@@ -15,9 +15,10 @@
 const uint64_t uint64_nan = static_cast<uint64_t>(-1);
 
 ParallelMesh::
-ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
+ParallelMesh(uint64_t r, uint64_t n_x, uint64_t n_y, double cell_size,
      uint16_t n_p, uint16_t n_q, int8_t border,
      uint64_t n_chunks_glob_x, uint64_t n_chunks_glob_y,
+     std::map<std::string, double> velocity_values,
      uint64_t glob_position_x, uint64_t glob_position_y,
      double o_x, double o_y)
     : n_cells_x(n_x)
@@ -25,13 +26,15 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
     , n_chunks_x(n_p)
     , n_chunks_y(n_q)
     , h(cell_size)
+    , boundary_velocity_values(velocity_values)
     , global_position({glob_position_x, glob_position_y})
     , origin({o_x, o_y})
     , q_x (n_x / n_p)
     , q_y (n_y / n_q)
     , r_x (n_x % n_p)
     , r_y (n_y % n_q)
-    , location_type(border){
+    , location_type(border)
+    , rank(r){
 
   // Compute cutoff between wide and narrow blocks
   this->cutoff_x = this->r_x * (this->q_x + 1);
@@ -282,7 +285,7 @@ ParallelMesh(uint64_t n_x, uint64_t n_y, double cell_size,
        this->mesh_chunks.emplace
           (std::piecewise_construct,
            std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
-           std::forward_as_tuple(m, n, this->h, pt, n_chunks_glob_x, n_chunks_glob_y,
+           std::forward_as_tuple(this, m, n, this->h, pt, n_chunks_glob_x, n_chunks_glob_y,
                                 p + this->n_chunks_x * this->global_position[0],
                                 q + this->n_chunks_y * this->global_position[1],
                                 o_x, o_y));
@@ -461,9 +464,123 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
   return {m, n};
 }
 
-void ParallelMesh::apply_velocity_bc(std::map<std::string, double> velocity_values) {
-  for (auto& it_mesh_chunks : this->mesh_chunks){
-    it_mesh_chunks.second.apply_velocity_bc(velocity_values);
+double ParallelMesh::get_velocity_mesh_chunk_x(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j){
+  bool owned_chunk = false;
+  double result;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == chunk_i && it_mesh_chunk.first[1] == chunk_j){
+      owned_chunk = true;
+      result = it_mesh_chunk.second.get_velocity_x(point_i, point_j);
+    }
+  }
+  if(!owned_chunk){
+    std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+    result = 0;
+  }
+  return result;
+}
+
+double ParallelMesh::get_velocity_mesh_chunk_y(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j){
+  bool owned_chunk = false;
+  double result;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == chunk_i && it_mesh_chunk.first[1] == chunk_j){
+      owned_chunk = true;
+      result = it_mesh_chunk.second.get_velocity_y(point_i, point_j);
+    }
+  }
+  if(!owned_chunk){
+    std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+    result = 0;
+  }
+  return result;
+}
+
+void ParallelMesh::set_velocity_mesh_chunk_x(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j, double value){
+  bool owned_chunk = false;
+  double result;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == chunk_i && it_mesh_chunk.first[1] == chunk_j){
+      owned_chunk = true;
+      it_mesh_chunk.second.set_velocity_x(point_i, point_j, value);
+    }
+  }
+  if(!owned_chunk){
+    std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+  }
+}
+
+void ParallelMesh::set_velocity_mesh_chunk_y(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j, double value){
+  bool owned_chunk = false;
+  double result;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == chunk_i && it_mesh_chunk.first[1] == chunk_j){
+      owned_chunk = true;
+      it_mesh_chunk.second.set_velocity_y(point_i, point_j, value);
+    }
+  }
+  if(!owned_chunk){
+    std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+  }
+}
+
+uint64_t ParallelMesh::get_n_points_x_mesh_chunk(uint64_t i, uint64_t j){
+  bool owned_chunk = false;
+  double result;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == i && it_mesh_chunk.first[1] == j){
+      owned_chunk = true;
+      result = it_mesh_chunk.second.get_n_points_x();
+    }
+  }
+  if(!owned_chunk){
+    std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+    result = 0;
+  }
+  return result;
+}
+
+uint64_t ParallelMesh::get_n_points_y_mesh_chunk(uint64_t i, uint64_t j){
+  bool owned_chunk = false;
+  double result;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == i && it_mesh_chunk.first[1] == j){
+      owned_chunk = true;
+      result = it_mesh_chunk.second.get_n_points_y();
+    }
+  }
+  if(!owned_chunk){
+    std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+    result = 0;
+  }
+  return result;
+}
+
+void ParallelMesh::apply_velocity_bc() {
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    it_mesh_chunk.second.apply_velocity_bc(this->boundary_velocity_values);
+  }
+}
+
+double ParallelMesh::get_reynolds_l(){
+  double max = 0;
+  double l;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    l = it_mesh_chunk.second.get_cell_size() * std::max(it_mesh_chunk.second.get_n_cells_x(), it_mesh_chunk.second.get_n_cells_y());
+    if(l > max){
+      max = l;
+    }
+  }
+  return max;
+}
+
+double ParallelMesh::get_boundary_velocity_value(std::string boundary){
+  return this->boundary_velocity_values.at(boundary);
+}
+
+void ParallelMesh::pmesh_predict_velocity(double delta_t, double nu){
+  for(auto& it_mesh_chunk : this->mesh_chunks){
+    it_mesh_chunk.second.chunk_predict_velocity(delta_t, nu);
   }
 }
 

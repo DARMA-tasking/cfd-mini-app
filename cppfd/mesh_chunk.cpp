@@ -1,4 +1,5 @@
 #include "mesh_chunk.h"
+#include "parallel_mesh.h"
 
 #include <iostream>
 #include <array>
@@ -15,12 +16,13 @@
 #endif
 
 MeshChunk::
-MeshChunk(uint64_t n_x, uint64_t n_y, double cell_size,
+MeshChunk(ParallelMesh* pp_mesh, uint64_t n_x, uint64_t n_y, double cell_size,
 	  const std::map<PointIndexEnum, PointTypeEnum>& point_types,
     uint64_t n_ch_glob_x, uint64_t n_ch_glob_y,
     uint64_t chunk_position_global_x, uint64_t chunk_position_global_y,
 	  double o_x, double o_y)
-  : n_cells_x(n_x)
+  : parent_parallel_mesh(pp_mesh)
+	, n_cells_x(n_x)
   , n_cells_y(n_y)
   , h(cell_size)
   , n_chunks_global_x(n_ch_glob_x)
@@ -118,21 +120,147 @@ set_velocity_y(uint64_t i, uint64_t j, double v){
 }
 
 double MeshChunk::
-get_velocity_x(uint64_t i, uint64_t j) const{
-  // Return invalid velocity when indices are out of bounds
-  if(i < this->get_n_points_x() && j < this->get_n_points_y())
-    return this->velocity(i, j, 0);
-  else
-    return std::nan("");
+get_velocity_x(int64_t i, int64_t j) {
+	//std::cout << "////// getting velocity x " << "(i, j) : (" << i << ", " << j << ")" << '\n';
+	if(i < this->get_n_points_x() && j < this->get_n_points_y() && i > 0 && j > 0){
+		//std::cout << "//// Owned or shared point" << '\n';
+		if((this->get_point_type(i, j) == PointTypeEnum::INTERIOR) || (this->get_point_type(i, j) == PointTypeEnum::SHARED_OWNED))
+    	return this->velocity(i, j, 0);
+		else if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
+			if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
+				std::string boundary;
+				if(j == this->get_n_points_y() - 1){
+					boundary = "v_x_t";
+				}
+				if(i == this->get_n_points_x() - 1){
+					boundary = "v_x_r";
+				}
+				if(i == 0){
+					boundary = "v_x_l";
+				}
+				if(j == 0){
+					boundary = "v_x_b";
+				}
+				return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
+			}
+		}
+
+	}
+	else{
+		//std::cout << "//// Not owned" << '\n';
+		if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
+			std::string boundary;
+			if(j == this->get_n_points_y() - 1){
+				boundary = "v_x_t";
+			}
+			if(i == this->get_n_points_x() - 1){
+				boundary = "v_x_r";
+			}
+			if(i == 0){
+				boundary = "v_x_l";
+			}
+			if(j == 0){
+				boundary = "v_x_b";
+			}
+			return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
+		}
+		int64_t chunk_position_x = this->global_position[0];
+		int64_t chunk_position_y = this->global_position[1];
+		uint64_t local_point_coordinate_x = i;
+		uint64_t local_point_coordinate_y = j;
+		if(i == this->get_n_points_x() + 1){
+			chunk_position_x = this->global_position[0] + 1;
+			local_point_coordinate_x = 1;
+		}
+		if(j == this->get_n_points_y() + 1){
+			chunk_position_y = this->global_position[1] + 1;
+			local_point_coordinate_y = 1;
+		}
+		if(i == 0){
+			chunk_position_x = this->global_position[0] - 1;
+			local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+		}
+		if(j == 0){
+			chunk_position_y = this->global_position[1] - 1;
+			local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+		}
+
+		return this->parent_parallel_mesh->get_velocity_mesh_chunk_x(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+	}
+	std::cout << "Error in x velocity get" << '\n';
+	return std::nan("");
 }
 
 double MeshChunk::
-get_velocity_y(uint64_t i, uint64_t j) const{
-  // Return invalid velocity when indices are out of bounds
-  if(i < this->get_n_points_x() && j < this->get_n_points_y())
-    return this->velocity(i, j, 1);
-  else
-    return std::nan("");
+get_velocity_y(int64_t i, int64_t j) {
+	//std::cout << "////// getting velocity y " << "(i, j) : (" << i << ", " << j << ")" << '\n';
+	if(i < this->get_n_points_x() && j < this->get_n_points_y() && i > 0 && j > 0){
+		if((this->get_point_type(i, j) == PointTypeEnum::INTERIOR) || (this->get_point_type(i, j) == PointTypeEnum::SHARED_OWNED))
+    	return this->velocity(i, j, 0);
+		else if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
+			if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
+				std::string boundary;
+				if(j == this->get_n_points_y() - 1){
+					boundary = "v_y_t";
+				}
+				if(i == this->get_n_points_x() - 1){
+					boundary = "v_y_r";
+				}
+				if(i == 0){
+					boundary = "v_y_l";
+				}
+				if(j == 0){
+					boundary = "v_y_b";
+				}
+				return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
+			}
+		}
+	}
+	else{
+		//std::cout << "//// Not owned" << '\n';
+		if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
+			std::string boundary;
+			if(j == this->get_n_points_y() - 1){
+				boundary = "v_y_t";
+			}
+			if(i == this->get_n_points_x() - 1){
+				boundary = "v_y_r";
+			}
+			if(i == 0){
+				boundary = "v_y_l";
+			}
+			if(j == 0){
+				boundary = "v_y_b";
+			}
+			return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
+		}
+		int64_t chunk_position_x = this->global_position[0];
+		int64_t chunk_position_y = this->global_position[1];
+		uint64_t local_point_coordinate_x = i;
+		uint64_t local_point_coordinate_y = j;
+		//std::cout << "//// Chunk position : (" << chunk_position_x << ", " << chunk_position_y << ")" << '\n';
+		//std::cout << "//// Local point coordinates : (" << local_point_coordinate_x << ", " << local_point_coordinate_y << ")" << '\n';
+		if(i == this->get_n_points_x() + 1){
+			chunk_position_x = this->global_position[0] + 1;
+			local_point_coordinate_x = 1;
+		}
+		if(j == this->get_n_points_y() + 1){
+			chunk_position_y = this->global_position[1] + 1;
+			local_point_coordinate_y = 1;
+		}
+		if(i == 0){
+			chunk_position_x = this->global_position[0] - 1;
+			local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+		}
+		if(j == 0){
+			chunk_position_y = this->global_position[1] - 1;
+			local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+		}
+
+		return this->parent_parallel_mesh->get_velocity_mesh_chunk_y(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+	}
+	std::cout << "Error in y velocity get" << '\n';
+	return std::nan("");
 }
 
 void MeshChunk::
@@ -179,6 +307,67 @@ void MeshChunk::apply_velocity_bc(std::map<std::string, double> velocity_values)
     for(uint64_t i = 0; i < this->get_n_points_x() + 1; i++){
       this->set_velocity_x(i, this->get_n_points_y() - 1, velocity_values["v_x_t"]);
       this->set_velocity_y(i, this->get_n_points_y() - 1, velocity_values["v_y_t"]);
+    }
+  }
+}
+
+void MeshChunk::chunk_predict_velocity(double delta_t, double nu){
+	Kokkos::View<double*[2]> v_star("predicted velocity", this->get_n_points_x() * this->get_n_points_y());
+  const uint64_t m = this->get_n_points_x();
+  const uint64_t mm1 = m - 1;
+  const uint64_t n = this->get_n_points_y();
+  const uint64_t nm1 = n - 1;
+
+  // compute common factors
+  const double h = this->get_cell_size();
+  const double inv_2sz = 1. / (2. * h);
+  const double inv_sz2 = 1. / (h * h);
+
+  // predict velocity components using finite difference discretization
+  for(uint64_t j = 0; j < n; j++){
+    for(uint64_t i = 0; i < m; i++){
+			if((this->get_point_type(i, j) == PointTypeEnum::INTERIOR) || (this->get_point_type(i, j) == PointTypeEnum::SHARED_OWNED)) {
+				// retrieve velocity at stencil nodes only once
+	      double v_x_ij = this->get_velocity_x(i, j);
+	      double v_x_ij_l = this->get_velocity_x(i - 1, j);
+	      double v_x_ij_r = this->get_velocity_x(i + 1, j);
+	      double v_x_ij_t = this->get_velocity_x(i, j + 1);
+	      double v_x_ij_b = this->get_velocity_x(i, j - 1);
+	      double v_y_ij = this->get_velocity_y(i, j);
+	      double v_y_ij_l = this->get_velocity_y(i - 1, j);
+	      double v_y_ij_r = this->get_velocity_y(i + 1, j);
+	      double v_y_ij_t = this->get_velocity_y(i, j + 1);
+	      double v_y_ij_b = this->get_velocity_y(i, j - 1);
+
+	      // factors needed to predict new x component
+	      double v_y = .25 * (v_y_ij_l + v_y_ij + v_y_ij_t);
+	      double dudx = inv_2sz * v_x_ij * (v_x_ij_r - v_x_ij_l);
+	      double dudy = inv_2sz * v_y * (v_x_ij_t - v_x_ij_b);
+	      double dudx2 = inv_sz2 * (v_x_ij_l - 2 * v_x_ij + v_x_ij_r);
+	      double dudy2 = inv_sz2 * (v_x_ij_b - 2 * v_x_ij + v_x_ij_t);
+
+	      // factors needed to predict new y component
+	      double v_x = .25 * (v_x_ij_b + v_x_ij + v_x_ij_t);
+	      double dvdy = inv_2sz * v_y_ij * (v_y_ij_r - v_y_ij_l);
+	      double dvdx = inv_2sz * v_x * (v_y_ij_t - v_y_ij_b);
+	      double dvdx2 = inv_sz2 * (v_y_ij_l - 2 * v_y_ij + v_y_ij_r);
+	      double dvdy2 = inv_sz2 * (v_y_ij_b - 2 * v_y_ij + v_y_ij_t);
+
+	      // assign predicted u and v components to predicted_velocity storage
+	      uint64_t k = this->Cartesian_to_index(i, j, m, n);
+	      v_star(k, 0) = v_x_ij + delta_t * (nu * (dudx2 + dudy2) - (v_x_ij * dudx + v_y * dudy));
+	      v_star(k, 1) = v_y_ij + delta_t * (nu * (dvdx2 + dvdy2) - (v_y_ij * dvdx + v_x * dvdy));
+			}
+    }
+	}
+	// assign interior predicted velocity vectors to mesh
+  for(int j = 0; j < n; j++){
+    for(int i = 0; i < m; i++){
+			if((this->get_point_type(i, j) == PointTypeEnum::INTERIOR) || (this->get_point_type(i, j) == PointTypeEnum::SHARED_OWNED)) {
+	      int k = this->Cartesian_to_index(i, j, m, n);
+	      this->set_velocity_x(i, j, v_star(k, 0));
+	      this->set_velocity_y(i, j, v_star(k, 1));
+			}
     }
   }
 }

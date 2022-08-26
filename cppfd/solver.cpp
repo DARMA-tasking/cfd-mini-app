@@ -11,6 +11,25 @@
 
 // main function to solve N-S equation on time steps
 void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step ats){
+  MPI_Init(NULL, NULL);
+
+  // Get the number of processes
+  int world_size;
+  MPI_Comm_size(MPI_COMM_WORLD, &world_size);
+
+  // Get the rank of the process
+  int world_rank;
+  MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
+  this->rank_identifier = world_rank;
+  this->rank_identifier_cartesian[0] = this->rank_identifier % this->n_p_mesh_x;
+  this->rank_identifier_cartesian[1] = this->rank_identifier / this->n_p_mesh_x;
+
+  if(this->verbosity >= 1){
+    std::cout << "Assembling parallel meshes..." << std::endl;
+  }
+  this->assemble_parallel_mesh();
+  MPI_Barrier(MPI_COMM_WORLD);
+
   // begin simulation
   if(this->verbosity >= 1)
     std::cout << "Initial timestep: "
@@ -21,29 +40,9 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
 	      << std::endl << std::endl;
 
   if(this->verbosity >= 1){
-    std::cout << "Assembling parallel meshes..." << std::endl;
-  }
-  this->assemble_parallel_meshes();
-  if(this->verbosity >= 1){
-    std::cout << "Writing parallel meshes vtm files..." << std::endl << std::endl;
-  }
-  #ifdef OUTPUT_VTK_FILES
-  this->write_vtms("all_vtm_test");
-  #endif
-
-  if(this->verbosity >= 1){
     std::cout << "Applying velocity boundary conditions..." << std::endl;
   }
-  // this->apply_velocity_bc(std::map<std::string, double>{
-  //   {"v_x_t", 1.0},
-  //   {"v_y_t", 1.0},
-  //   {"v_x_b", 1.0},
-  //   {"v_y_b", 1.0},
-  //   {"v_x_l", 1.0},
-  //   {"v_y_l", 1.0},
-  //   {"v_x_r", 1.0},
-  //   {"v_y_r", 1.0}
-  // });
+  this->apply_velocity_bc(this->boundary_velocity_values);
   this->boundary_conditions.apply_velocity_bc();
   if(s_p == stopping_point::AFTER_BOUNDARY_CONDITION){
     for(int j = 0; j < this->mesh_chunk->get_n_points_y(); j++){
@@ -53,46 +52,55 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
     }
     return;
   }
+  if(this->verbosity >= 1){
+    std::cout << "Writing parallel meshes vtm files..." << std::endl << std::endl;
+  }
 
   // compute Reynolds number from input parameters
-  double velocity_bc_max = this->boundary_conditions.get_velocity_bc_max_norm();
-  double l = this->mesh_chunk->get_cell_size() * std::max(this->mesh_chunk->get_n_cells_x(), this->mesh_chunk->get_n_cells_y());
+  double velocity_bc_max = this->get_velocity_bc_max_norm(this->boundary_velocity_values);
+  double l = this->parallel_mesh->get_reynolds_l();
   this->Re = velocity_bc_max * this->one / this->nu;
   if(this->verbosity > 0){
     std::cout << "Reynolds number : " << this->Re << std::endl;
   }
 
   Kokkos::Timer timer;
-  double time1 = timer.seconds();
-  if(this->verbosity > 0){
-    std::cout << std::endl;
-    std::cout << "Computing Laplacian matrix..." << std::endl;
+  double time2;
+
+  if(this->rank_identifier == 0){
+
+    double time1 = timer.seconds();
+    if(this->verbosity > 0){
+      std::cout << std::endl;
+      std::cout << "Computing Laplacian matrix..." << std::endl;
+    }
+    double lap_d = this->assemble_Laplacian();
+    time2 = timer.seconds();
+    if(this->verbosity > 0){
+      std::cout << "Laplacian density: " << std::setprecision (4)
+  	      << 100. * lap_d << " %\n";
+      std::cout << "Laplacian computation duration: " << time2 - time1 << std::endl;
+    }
+    if(s_p == stopping_point::AFTER_LAPLACIAN){
+      for (uint64_t j = 0; j < this->Laplacian.numRows(); j++) {
+        auto row = this->Laplacian.row(j);
+        uint64_t i = 0;
+        for (uint64_t k = 0; k < row.length; k++) {
+  	auto val = row.value(k);
+  	auto col = row.colidx(k);
+  	while (i++ < col)
+  	  std::cout << 0 << " ";
+  	std::cout << val << " ";
+        }
+        while (i++ < this->Laplacian.numCols())
+  	std::cout << 0 << " ";
+        std::cout << std::endl;
+      }
+      return;
+    }
   }
 
-  double lap_d = this->assemble_Laplacian();
-  double time2 = timer.seconds();
-  if(this->verbosity > 0){
-    std::cout << "Laplacian density: " << std::setprecision (4)
-	      << 100. * lap_d << " %\n";
-    std::cout << "Laplacian computation duration: " << time2 - time1 << std::endl;
-  }
-  if(s_p == stopping_point::AFTER_LAPLACIAN){
-    for (uint64_t j = 0; j < this->Laplacian.numRows(); j++) {
-      auto row = this->Laplacian.row(j);
-      uint64_t i = 0;
-      for (uint64_t k = 0; k < row.length; k++) {
-	auto val = row.value(k);
-	auto col = row.colidx(k);
-	while (i++ < col)
-	  std::cout << 0 << " ";
-	std::cout << val << " ";
-      }
-      while (i++ < this->Laplacian.numCols())
-	std::cout << 0 << " ";
-      std::cout << std::endl;
-    }
-    return;
-  }
+  time2 = timer.seconds();
 
   if(this->verbosity > 0){
     std::cout << std::endl;
@@ -105,13 +113,6 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   double time_assemble_RHS = 0.;
   double time_poisson_solve = 0.;
   double time_corrector_step = 0.;
-
-  // initialize MPI environment
-  #ifdef USE_MPI
-  MPI_Init(NULL, NULL);
-  std::cout << std::endl
-    << " Using MPI to predict velocity"<< std::endl;
-  #endif
 
   //start iterating on time steps
   int iteration = 0;
@@ -127,14 +128,14 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
     Kokkos::Timer timer2;
 
     // predict velocity without pressure
-    this->predict_velocity();
+    //this->predict_velocity();
     double time_post_predict = timer2.seconds();
     time_predictor_step += time_post_predict;
 
     // predict velocity without pressure using MPI function
-    #ifdef USE_MPI
-    MPI_predict_velocity();
-    #endif
+    MPI_Barrier(MPI_COMM_WORLD);
+    this->parallel_mesh->pmesh_predict_velocity(this->delta_t, this->nu);
+
 
     // Display velocity values in first iteration stopping point case
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
@@ -147,7 +148,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
     }
 
     // assemble PPE RHS
-    this->assemble_poisson_RHS();
+    this->new_assemble_poisson_RHS();
     double time_post_RHS = timer2.seconds();
     time_assemble_RHS += time_post_RHS - time_post_predict;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
@@ -158,7 +159,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
     }
 
     // solve PPE
-    this->poisson_solve_pressure(1e-2, l_s);
+    this->new_poisson_solve_pressure(1e-2, l_s);
     double time_post_poisson_solve = timer2.seconds();
     time_poisson_solve += time_post_poisson_solve - time_post_RHS;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
@@ -171,7 +172,7 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
     }
 
     // correct velocity with pressure
-    this->correct_velocity();
+    this->new_correct_velocity();
     double time_post_correct = timer2.seconds();
     time_corrector_step += time_post_correct - time_post_poisson_solve;
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
@@ -250,26 +251,28 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
   timer.reset();
 
   // Finalize MPI environment
-  #ifdef USE_MPI
   MPI_Finalize();
+  #ifdef OUTPUT_VTK_FILES
+  this->write_vtms("all_vtm_test");
   #endif
 }
 
 void Solver::apply_velocity_bc(std::map<std::string, double> velocity_values){
-  for (auto& it_parallel_meshes : this->parallel_meshes){
-    it_parallel_meshes.second.apply_velocity_bc(velocity_values);
-  }
+  this->parallel_mesh->apply_velocity_bc();
+  // for (auto& it_parallel_meshes : this->parallel_meshes){
+  //   it_parallel_meshes.second.apply_velocity_bc(velocity_values);
+  // }
 }
 
-void Solver::assemble_parallel_meshes(){
+void Solver::assemble_parallel_mesh(){
   uint64_t n_x;
   uint64_t n_y;
+  uint64_t prev_n_cells_x;
+  uint64_t prev_n_cells_y;
   uint16_t n_p = this->n_colors_x;
   uint16_t n_q = this->n_colors_y;
   double o_x = 0.;
   double o_y = 0.;
-  uint64_t global_position_x = 0;
-  uint64_t global_position_y = 0;
 
   uint64_t n_cells_p_mesh_x = this->domain_size_x / this->n_p_mesh_x;
   uint64_t n_cells_p_mesh_y = this->domain_size_y / this->n_p_mesh_y;
@@ -283,305 +286,205 @@ void Solver::assemble_parallel_meshes(){
 
   // case where size of domain is NOT a multiple of the number of parallel meshes given
   if(remainder_x || remainder_y){
-    // case where there is only one column of parallel meshes
-    if((this->n_p_mesh_x == 1) && (this->n_p_mesh_y != 1)){
-      for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
-        n_y = n_cells_p_mesh_y;
-        // correct parallel mesh size with remainder
-        if(r_y > 0){
-          n_y++;
-          r_y--;
-        }
+    uint64_t kx = this->rank_identifier_cartesian[0];
+    uint64_t ky = this->rank_identifier_cartesian[1];
 
-        // compute location type of current parallel mesh
-        if(ky == 0){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_BOT);
-        }
-        else if(ky == this->n_p_mesh_y - 1){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_TOP);
-        }
-        else{
-          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_MID);
-        }
-
-        if(this->verbosity >= 2){
-          std::cout << "coordinates, pmesh border type: "
-          << "(0, " << ky << ")"
-          << " // " << static_cast<int>(p_mesh_border) << '\n';
-        }
-
-        // construct current parallel mesh
-        this->parallel_meshes.emplace
-          (std::piecewise_construct,
-          std::forward_as_tuple(std::array<uint64_t,2>{0, ky}),
-          std::forward_as_tuple(n_cells_p_mesh_x, n_y, this->h, n_p, n_q, p_mesh_border,
-                                (this->n_p_mesh_x * this->n_colors_x),
-                                (this->n_p_mesh_y * this->n_colors_y),
-                                0, ky, o_x, o_y));
-
-        global_position_y++;
-        o_y += n_y * this->h;
-      }
+    // compute number of cells for owned parallel mesh
+    if(kx >= remainder_x){
+      r_x = 0;
     }
-    // case where there is only one row of parallel meshes
-    else if((this->n_p_mesh_x != 1) && (this->n_p_mesh_y == 1)){
-      for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
-        n_x = n_cells_p_mesh_x;
-        // correct parallel mesh size with remainder
-        if(r_x > 0){
-          n_x++;
-          r_x--;
-        }
+    else{
+      r_x = 1;
+    }
+    if(ky >= remainder_y){
+      r_y = 0;
+    }
+    else{
+      r_y = 1;
+    }
+    n_x = n_cells_p_mesh_x + r_x;
+    n_y = n_cells_p_mesh_y + r_y;
 
-        // compute location type of current parallel mesh
-        if(kx == 0){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_L);
-        }
-        else if(kx == this->n_p_mesh_x - 1){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_R);
-        }
-        else{
-          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID);
-        }
-
-        if(this->verbosity >= 2){
-          std::cout << "coordinates, pmesh border type: "
-          << "( " << kx << ", 0)"
-          << " // " << static_cast<int>(p_mesh_border) << '\n';
-        }
-
-        // construct current parallel mesh
-        this->parallel_meshes.emplace
-          (std::piecewise_construct,
-          std::forward_as_tuple(std::array<uint64_t,2>{kx, 0}),
-          std::forward_as_tuple(n_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
-                                (this->n_p_mesh_x * this->n_colors_x),
-                                (this->n_p_mesh_y * this->n_colors_y),
-                                kx, 0, o_x, o_y));
-
-        global_position_x++;
-        o_x += n_x * this->h;
+    // compute origin of owned parallel mesh
+    // using number of cells along x and y axis that preceded owned pmesh
+    if(remainder_x){
+      if(kx > remainder_x){
+        prev_n_cells_x = (kx % remainder_x) * n_cells_p_mesh_x + remainder_x * (n_cells_p_mesh_x + 1);
+      }
+      else{
+        prev_n_cells_x = (n_cells_p_mesh_x + 1) * kx;
       }
     }
     else{
-      for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
-        global_position_x = 0;
-        o_x = 0;
-        r_x = remainder_x;
-        n_y = n_cells_p_mesh_y;
-        // correct parallel mesh size with remainder
-        if(r_y > 0){
-          n_y++;
-          r_y--;
-        }
-        for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
-          n_x = n_cells_p_mesh_x;
-          // correct parallel mesh size with remainder
-          if(r_x > 0){
-            n_x++;
-            r_x--;
-          }
-
-          // compute location type of current parallel mesh
-          if(kx == 0){
-            if(ky == 0){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_L);
-            }
-            else if(ky == this->n_p_mesh_y - 1){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_L);
-            }
-            else{
-              p_mesh_border = static_cast<int>(LocationIndexEnum::LEFT);
-            }
-          }
-          else if(kx == this->n_p_mesh_x - 1){
-            if(ky == 0){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_R);
-            }
-            else if(ky == this->n_p_mesh_y - 1){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_R);
-            }
-            else{
-              p_mesh_border = static_cast<int>(LocationIndexEnum::RIGHT);
-            }
-          }
-          else{
-            if(ky == 0){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM);
-            }
-            else if(ky == this->n_p_mesh_y - 1){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP);
-            }
-            else{
-              p_mesh_border = static_cast<int>(LocationIndexEnum::INTERIOR);
-            }
-          }
-
-          if(this->verbosity >= 2){
-            std::cout << "coordinates, pmesh border type: "
-            << "(" << kx << ", " << ky << ")"
-            << " // " << static_cast<int>(p_mesh_border) << '\n';
-          }
-
-          this->parallel_meshes.emplace
-            (std::piecewise_construct,
-            std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-            std::forward_as_tuple(n_x, n_y, this->h, n_p, n_q, p_mesh_border,
-                                  (this->n_p_mesh_x * this->n_colors_x),
-                                  (this->n_p_mesh_y * this->n_colors_y),
-                                  kx, ky, o_x, o_y));
-          global_position_x++;
-          o_x += n_x * this->h;
-        }
-        global_position_y++;
-        o_y += n_y * this->h;
+      prev_n_cells_x = kx * n_cells_p_mesh_x;
+    }
+    if(remainder_y){
+      if(ky > remainder_y){
+        prev_n_cells_y = (ky % remainder_y) * n_cells_p_mesh_y + remainder_y * (n_cells_p_mesh_y + 1);
+      }
+      else{
+        prev_n_cells_y = (n_cells_p_mesh_y + 1) * ky;
       }
     }
-  }
-  // case where size of domain is a multiple of the number of parallel meshes given
-  else{
-    // case where parallel mesh is unique
-    if((n_p_mesh_x == 1) && (n_p_mesh_y == 1)){
-      this->parallel_meshes.emplace
-        (std::piecewise_construct,
-        std::forward_as_tuple(std::array<uint64_t,2>{0, 0}),
-        std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, static_cast<int>(LocationIndexEnum::SINGLE),
-                              (this->n_p_mesh_x * this->n_colors_x),
-                              (this->n_p_mesh_y * this->n_colors_y),
-                              0, 0, 0, 0));
+    else{
+      prev_n_cells_y = ky * n_cells_p_mesh_y;
     }
+    o_x = prev_n_cells_x * this->h;
+    o_y = prev_n_cells_y * this->h;
+
     // case where there is only one column of parallel meshes
-    else if((this->n_p_mesh_x == 1) && (this->n_p_mesh_y != 1)){
-      for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
-
-        // compute location type of current parallel mesh
-        if(ky == 0){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_BOT);
-        }
-        else if(ky == this->n_p_mesh_y - 1){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_TOP);
-        }
-        else{
-          p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_MID);
-        }
-
-        if(this->verbosity >= 2){
-          std::cout << "coordinates, pmesh border type: "
-          << "(0, " << ky << ")"
-          << " // " << static_cast<int>(p_mesh_border) << '\n';
-        }
-
-        // construct current parallel mesh
-        this->parallel_meshes.emplace
-          (std::piecewise_construct,
-          std::forward_as_tuple(std::array<uint64_t,2>{0, ky}),
-          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
-                                (this->n_p_mesh_x * this->n_colors_x),
-                                (this->n_p_mesh_y * this->n_colors_y),
-                                0, ky, o_x, o_y));
-
-        global_position_y++;
-        o_y += n_cells_p_mesh_y * this->h;
+    if((this->n_p_mesh_x == 1) && (this->n_p_mesh_y != 1)){
+      // compute location type of current parallel mesh
+      if(ky == 0){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_BOT);
+      }
+      else if(ky == this->n_p_mesh_y - 1){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_TOP);
+      }
+      else{
+        p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_MID);
       }
     }
     // case where there is only one row of parallel meshes
     else if((this->n_p_mesh_x != 1) && (this->n_p_mesh_y == 1)){
-      for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
-
-        // compute location type of current parallel mesh
-        if(kx == 0){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_L);
+      // compute location type of current parallel mesh
+      if(kx == 0){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_L);
+      }
+      else if(kx == this->n_p_mesh_x - 1){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_R);
+      }
+      else{
+        p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID);
+      }
+    }
+    else{
+      // compute location type of current parallel mesh
+      if(kx == 0){
+        if(ky == 0){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_L);
         }
-        else if(kx == this->n_p_mesh_x - 1){
-          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_R);
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_L);
         }
         else{
-          p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID);
+          p_mesh_border = static_cast<int>(LocationIndexEnum::LEFT);
         }
-
-        if(this->verbosity >= 2){
-          std::cout << "coordinates, pmesh border type: "
-          << "( " << kx << ", 0)"
-          << " // " << static_cast<int>(p_mesh_border) << '\n';
+      }
+      else if(kx == this->n_p_mesh_x - 1){
+        if(ky == 0){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_R);
         }
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_R);
+        }
+        else{
+          p_mesh_border = static_cast<int>(LocationIndexEnum::RIGHT);
+        }
+      }
+      else{
+        if(ky == 0){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM);
+        }
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<int>(LocationIndexEnum::TOP);
+        }
+        else{
+          p_mesh_border = static_cast<int>(LocationIndexEnum::INTERIOR);
+        }
+      }
+    }
+    // construct owned parallel mesh
+    this->parallel_mesh = std::make_unique<ParallelMesh>(this->rank_identifier, n_x, n_y,
+                          this->h, n_p, n_q, p_mesh_border,
+                          (this->n_p_mesh_x * this->n_colors_x),
+                          (this->n_p_mesh_y * this->n_colors_y),
+                          this->boundary_velocity_values,
+                          kx, ky,
+                          o_x, o_y);
+  }
+  // case where size of domain is a multiple of the number of parallel meshes given
+  else{
+    uint64_t kx = this->rank_identifier_cartesian[0];
+    uint64_t ky = this->rank_identifier_cartesian[1];
+    o_x = n_cells_p_mesh_x * this->h * kx;
+    o_y = n_cells_p_mesh_y * this->h * ky;
 
-        // construct current parallel mesh
-        this->parallel_meshes.emplace
-          (std::piecewise_construct,
-          std::forward_as_tuple(std::array<uint64_t,2>{kx, 0}),
-          std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
-                                (this->n_p_mesh_x * this->n_colors_x),
-                                (this->n_p_mesh_y * this->n_colors_y),
-                                kx, 0, o_x, o_y));
-
-        global_position_x++;
-        o_x += n_cells_p_mesh_x * this->h;
+    // case where parallel mesh is unique
+    if((n_p_mesh_x == 1) && (n_p_mesh_y == 1)){
+       p_mesh_border = static_cast<int>(LocationIndexEnum::SINGLE);
+    }
+    // case where there is only one column of parallel meshes
+    else if((this->n_p_mesh_x == 1) && (this->n_p_mesh_y != 1)){
+      // compute location type of current parallel mesh
+      if(ky == 0){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_BOT);
+      }
+      else if(ky == this->n_p_mesh_y - 1){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_TOP);
+      }
+      else{
+        p_mesh_border = static_cast<int>(LocationIndexEnum::VERT_BAR_MID);
+      }
+    }
+    // case where there is only one row of parallel meshes
+    else if((this->n_p_mesh_x != 1) && (this->n_p_mesh_y == 1)){
+      // compute location type of current parallel mesh
+      if(kx == 0){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_L);
+      }
+      else if(kx == this->n_p_mesh_x - 1){
+        p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_R);
+      }
+      else{
+        p_mesh_border = static_cast<int>(LocationIndexEnum::HORIZ_BAR_MID);
       }
     }
     else {
-      for(uint64_t ky = 0; ky < this->n_p_mesh_y; ky++){
-        global_position_x = 0;
-        o_x = 0;
-        for(uint64_t kx = 0; kx < this->n_p_mesh_x; kx++){
-
-          // compute location type of current parallel mesh
-          if(kx == 0){
-            if(ky == 0){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_L);
-            }
-            else if(ky == this->n_p_mesh_y - 1){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_L);
-            }
-            else{
-              p_mesh_border = static_cast<int>(LocationIndexEnum::LEFT);
-            }
-          }
-          else if(kx == this->n_p_mesh_x - 1){
-            if(ky == 0){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM_R);
-            }
-            else if(ky == this->n_p_mesh_y - 1){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP_R);
-            }
-            else{
-              p_mesh_border = static_cast<int>(LocationIndexEnum::RIGHT);
-            }
-          }
-          else{
-            if(ky == 0){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::BOTTOM);
-            }
-            else if(ky == this->n_p_mesh_y - 1){
-              p_mesh_border = static_cast<int>(LocationIndexEnum::TOP);
-            }
-            else{
-              p_mesh_border = static_cast<int>(LocationIndexEnum::INTERIOR);
-            }
-          }
-
-          if(this->verbosity >= 2){
-            std::cout << "coordinates, pmesh border type: "
-            << "(" << kx << ", " << ky << ")"
-            << " // " << static_cast<int>(p_mesh_border) << '\n';
-          }
-
-          // construct current parallel mesh
-          this->parallel_meshes.emplace
-            (std::piecewise_construct,
-            std::forward_as_tuple(std::array<uint64_t,2>{kx, ky}),
-            std::forward_as_tuple(n_cells_p_mesh_x, n_cells_p_mesh_y, this->h, n_p, n_q, p_mesh_border,
-                                  (this->n_p_mesh_x * this->n_colors_x),
-                                  (this->n_p_mesh_y * this->n_colors_y),
-                                  kx, ky,
-                                  o_x, o_y));
-
-          global_position_x++;
-          o_x += n_cells_p_mesh_x * this->h;
+      // compute location type of current parallel mesh
+      if(kx == 0){
+        if(ky == 0){
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::BOTTOM_L);
         }
-        global_position_y++;
-        o_y += n_cells_p_mesh_y * this->h;
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::TOP_L);
+        }
+        else{
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::LEFT);
+        }
       }
+      else if(kx == this->n_p_mesh_x - 1){
+        if(ky == 0){
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::BOTTOM_R);
+        }
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::TOP_R);
+        }
+        else{
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::RIGHT);
+        }
+      }
+      else{
+        if(ky == 0){
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::BOTTOM);
+        }
+        else if(ky == this->n_p_mesh_y - 1){
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::TOP);
+        }
+        else{
+          p_mesh_border = static_cast<uint8_t>(LocationIndexEnum::INTERIOR);
+        }
+      }
+
     }
+    // construct owned parallel mesh
+    this->parallel_mesh = std::make_unique<ParallelMesh>(this->rank_identifier, n_cells_p_mesh_x, n_cells_p_mesh_y,
+                          this->h, n_p, n_q, p_mesh_border,
+                          (this->n_p_mesh_x * this->n_colors_x),
+                          (this->n_p_mesh_y * this->n_colors_y),
+                          this->boundary_velocity_values,
+                          kx, ky,
+                          o_x, o_y);
   }
 }
 
@@ -739,24 +642,10 @@ void Solver::predict_velocity(){
   }
 }
 
-// implementation of the predictor step using MPI
-void Solver::MPI_predict_velocity(){
-  Kokkos::View<double*[2]> v_star("predicted velocity", this->mesh_chunk->get_n_points_x() * this->mesh_chunk->get_n_points_y());
-
-  // // Get the number of processes
-  // int p;
-  // MPI_Comm_size(MPI_COMM_WORLD, &p);
-  //
-  // // Get process rank
-  // int world_rank;
-  // MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
-
-}
-
 // implementation of the poisson RHS assembly
 void Solver::assemble_poisson_RHS(){
-  this->RHS = Kokkos::View<double*>("RHS", this->mesh_chunk->get_n_cells_x() * this->mesh_chunk->get_n_cells_y());
-  double factor = this->rho / this->delta_t / (2 * this->mesh_chunk->get_cell_size());
+  this->RHS = Kokkos::View<double*>("RHS", this->domain_size_x * this->domain_size_y);
+  double factor = this->rho / this->delta_t / (2 * this->h);
   for(int j = 0; j < this->mesh_chunk->get_n_cells_y(); j++){
     for(int i = 0; i < this->mesh_chunk->get_n_cells_x(); i++){
       double u_r = this->mesh_chunk->get_velocity_x(i+1, j) + this->mesh_chunk->get_velocity_x(i+1, j+1);
@@ -769,15 +658,47 @@ void Solver::assemble_poisson_RHS(){
   }
 }
 
+void Solver::new_assemble_poisson_RHS(){
+  this->RHS = Kokkos::View<double*>("RHS", this->domain_size_x * this->domain_size_y);
+  double factor = this->rho / this->delta_t / (2 * this->h);
+  double u_r;
+  double u_l;
+  double v_t;
+  double v_b;
+  uint64_t k;
+  uint64_t i_global;
+  uint64_t j_global;
+  for(uint64_t j_chunk = 0; j_chunk < this->n_p_mesh_y; j_chunk++){
+    for(uint64_t j = 0; j < this->parallel_mesh->get_n_points_y_mesh_chunk(0, j_chunk) - 1; j++){
+      for(uint64_t i_chunk = 0; i_chunk < this->n_p_mesh_x; i_chunk++){
+        for(uint64_t i = 0; i < this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk) - 1; i++){
+        u_r = this->parallel_mesh->get_velocity_mesh_chunk_x(i_chunk, j_chunk, i+1, j) + this->parallel_mesh->get_velocity_mesh_chunk_x(i_chunk, j_chunk, i+1, j+1);
+        u_l = this->parallel_mesh->get_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j) + this->parallel_mesh->get_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j+1);
+        v_t = this->parallel_mesh->get_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j+1) + this->parallel_mesh->get_velocity_mesh_chunk_y(i_chunk, j_chunk, i+1, j+1);
+        v_b = this->parallel_mesh->get_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j) + this->parallel_mesh->get_velocity_mesh_chunk_y(i_chunk, j_chunk, i+1, j);
+        LocalCoordinates loc = {
+          {i_chunk, j_chunk},
+          {i, j}
+        };
+        i_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[0];
+        j_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[1];
+        k = j_global * this->domain_size_x + i_global;
+        this->RHS(k) = factor * (u_r - u_l + v_t - v_b);
+        }
+      }
+    }
+  }
+}
+
 Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
   // initialize approximate solution with null guess
-  uint64_t n_x = this->mesh_chunk->get_n_cells_x();
-  uint64_t n_y = this->mesh_chunk->get_n_cells_y();
+  uint64_t n_x = this->domain_size_x;
+  uint64_t n_y = this->domain_size_y;
   uint64_t mn = n_x * n_y;
   Kokkos::View<double*> x("x", mn);
 
   // initialize scalar factor of Laplacian
-  double factor = this->one / (this->mesh_chunk->get_cell_size() * this->mesh_chunk->get_cell_size());
+  double factor = this->one / (this->h * h);
 
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
@@ -832,13 +753,13 @@ Kokkos::View<double*> Solver::conjugate_gradient_solve(double r_tol){
 
 Kokkos::View<double*> Solver::gauss_seidel_solve(double r_tol, int max_it, int n_sweeps){
   // initialize approximate solution with null guess
-  uint64_t n_x = this->mesh_chunk->get_n_cells_x();
-  uint64_t n_y = this->mesh_chunk->get_n_cells_y();
+  uint64_t n_x = this->domain_size_x;
+  uint64_t n_y = this->domain_size_y;
   uint64_t mn = n_x * n_y;
   Kokkos::View<double*> x("x", mn);
 
   // initialize scalar factor of Laplacian
-  double factor = this->one / (this->mesh_chunk->get_cell_size() * this->mesh_chunk->get_cell_size());
+  double factor = this->one / (this->h * this->h);
 
   // initialize residual
   Kokkos::View<double*> residual("residual", mn);
@@ -912,6 +833,16 @@ void Solver::poisson_solve_pressure(double r_tol, linear_solver l_s){
   }
 }
 
+void Solver::new_poisson_solve_pressure(double r_tol, linear_solver l_s){
+  if(l_s == linear_solver::CONJUGATE_GRADIENT){
+    this->pressure = this->conjugate_gradient_solve(r_tol);
+  } else if(l_s == linear_solver::GAUSS_SEIDEL){
+    this->pressure = this->gauss_seidel_solve(r_tol, 5, 10);
+  } else{
+    std::cout << "  Pressure Poisson equation ignored." << std::endl;
+  }
+}
+
 // implementation of the corrector step
 void Solver::correct_velocity(){
   double factor = .5 / this->mesh_chunk->get_cell_size();
@@ -924,6 +855,37 @@ void Solver::correct_velocity(){
       double p_br = this->mesh_chunk->get_pressure(i, j - 1);
       this->mesh_chunk->set_velocity_x(i, j, (this->mesh_chunk->get_velocity_x(i, j) - t_to_r * (p_tr - p_tl + p_br - p_bl) * factor));
       this->mesh_chunk->set_velocity_y(i, j, (this->mesh_chunk->get_velocity_y(i, j) - t_to_r * (p_tr - p_br + p_tl - p_bl) * factor));
+    }
+  }
+}
+
+void Solver::new_correct_velocity(){
+  double factor = .5 / this->h;
+  double t_to_r = this->delta_t / this->rho;
+  double p_tl;
+  double p_tr;
+  double p_bl;
+  double p_br;
+  uint64_t i_global;
+  uint64_t j_global;
+  for(uint64_t j_chunk = 0; j_chunk < this->n_p_mesh_y; j_chunk++){
+    for(uint64_t j = 0; j < this->parallel_mesh->get_n_points_y_mesh_chunk(0, j_chunk) - 1; j++){
+      for(uint64_t i_chunk = 0; i_chunk < this->n_p_mesh_x; i_chunk++){
+        for(uint64_t i = 0; i < this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk) - 1; i++){
+          LocalCoordinates loc = {
+            {i_chunk, j_chunk},
+            {i, j}
+          };
+          i_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[0];
+          j_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[1];
+          p_tl = this->pressure(j_global * this->domain_size_x + i_global - 1);
+          p_tr = this->pressure(j_global * this->domain_size_x + i_global);
+          p_bl = this->pressure((j_global - 1) * this->domain_size_x + i_global - 1);
+          p_br = this->pressure((j_global - 1) * this->domain_size_x + i_global);
+          this->parallel_mesh->set_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j, (this->parallel_mesh->get_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j) - t_to_r * (p_tr - p_tl + p_br - p_bl) * factor));
+          this->parallel_mesh->set_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j, (this->parallel_mesh->get_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j) - t_to_r * (p_tr - p_br + p_tl - p_bl) * factor));
+        }
+      }
     }
   }
 }
@@ -945,21 +907,41 @@ double Solver::compute_global_courant_number(){
   return max_C;
 }
 
+double Solver::get_velocity_bc_max_norm(std::map<std::string, double> velocity_values){
+  double v_x_t = velocity_values["v_x_t"];
+  double v_y_t = velocity_values["v_y_t"];
+  double v_x_b = velocity_values["v_x_b"];
+  double v_y_b = velocity_values["v_y_b"];
+  double v_x_l = velocity_values["v_x_l"];
+  double v_y_l = velocity_values["v_y_l"];
+  double v_x_r = velocity_values["v_x_r"];
+  double v_y_r = velocity_values["v_y_r"];
+  return std::
+    sqrt(std::max({
+	     v_x_t * v_x_t + v_y_t * v_y_t,
+	     v_x_b * v_x_b + v_y_b * v_y_b,
+	     v_x_l * v_x_l + v_y_l * v_y_l,
+	     v_x_r * v_x_r + v_y_r * v_y_r}));
+}
+
 #ifdef OUTPUT_VTK_FILES
 uint64_t Solver::write_vtms(const std::string& file_name) const{
   std::string file_name_indexed;
   std::string index;
   uint64_t k = 0;
-  for (const auto& it_parallel_meshes : this->parallel_meshes){
-    index = "";
-    if(k < 10){
-      index += "0";
-    }
-    index += std::to_string(k);
-    file_name_indexed = file_name + index;
-    it_parallel_meshes.second.write_vtm(file_name_indexed);
-    k++;
-  }
+  index = "" + std::to_string(this->rank_identifier);
+  file_name_indexed = file_name + index;
+  this->parallel_mesh->write_vtm(file_name_indexed);
+  // for (const auto& it_parallel_meshes : this->parallel_meshes){
+  //   index = "";
+  //   if(k < 10){
+  //     index += "0";
+  //   }
+  //   index += std::to_string(k);
+  //   file_name_indexed = file_name + index;
+  //   it_parallel_meshes.second.write_vtm(file_name_indexed);
+  //   k++;
+  // }
 
   // return fill name with extension
   return k;

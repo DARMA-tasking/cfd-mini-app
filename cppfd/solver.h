@@ -18,6 +18,7 @@ class Solver
 {
   public:
   Solver(std::shared_ptr<MeshChunk> m,
+      std::map<std::string, double> vel_values,
       BoundaryConditions& b_c,
       double d_t,
       double t_f,
@@ -34,6 +35,7 @@ class Solver
       uint64_t colors_y)
       : mesh_chunk(m)
       , boundary_conditions(b_c)
+      , boundary_velocity_values(vel_values)
       , delta_t(d_t)
       , t_final(t_f)
       , rho(r)
@@ -87,7 +89,7 @@ class Solver
 
   private:
     // assemble parallel meshes that will be used depending on number of ranks
-    void assemble_parallel_meshes();
+    void assemble_parallel_mesh();
 
     // set mesh chunk border types depending on their position in the global and parallel mesh
     void set_mesh_chunk_borders();
@@ -115,13 +117,17 @@ class Solver
     void predict_velocity();
 
     // compute predicted velocities without pressure term using MPI
-    void MPI_predict_velocity();
+    void pmesh_predict_velocity();
 
     // build poisson equation right hand side vector
     void assemble_poisson_RHS();
 
+    void new_assemble_poisson_RHS();
+
     // solve poisson pressure equation using conjugate gradient method
     void poisson_solve_pressure(double r_tol, linear_solver l_s);
+
+    void new_poisson_solve_pressure(double r_tol, linear_solver l_s);
 
     // conjugate gradient solver
     Kokkos::View<double*> conjugate_gradient_solve(double r_tol);
@@ -132,23 +138,31 @@ class Solver
     // apply corrector step
     void correct_velocity();
 
+    void new_correct_velocity();
+
     // compute courant number in a certain cell
     double compute_cell_courant_number(int i, int j);
 
     // compute maximum courant number over all mesh cells
     double compute_global_courant_number();
 
+    // compute maximum norm of velocity boundary conditions
+    double get_velocity_bc_max_norm(std::map<std::string, double> velocity_values);
+
     // reference to mesh onto which solve is performed
     std::shared_ptr<MeshChunk> mesh_chunk;
 
     // storage for parallel meshes
     std::map<std::array<uint64_t, 2>, ParallelMesh> parallel_meshes = {};
+    std::unique_ptr<ParallelMesh> parallel_mesh;
 
     // store Kokkos kernels zero and unit values
     double zero = Kokkos::ArithTraits<double>::zero();
     double one = Kokkos::ArithTraits<double>::one();
 
     // parallel mesh variables
+    uint64_t rank_identifier = 0;
+    std::array<uint64_t, 2> rank_identifier_cartesian = {0, 0};
     uint64_t p = 1;
     uint64_t n_p_mesh_x = 1;
     uint64_t n_p_mesh_y = 1;
@@ -177,6 +191,10 @@ class Solver
     // poisson equation right hand side vector
     Kokkos::View<double*> RHS = {};
 
+    // pressure across domain
+    Kokkos::View<double*> pressure = {};
+
     // boundary conditions
+    std::map<std::string, double> boundary_velocity_values;
     BoundaryConditions boundary_conditions;
 };
