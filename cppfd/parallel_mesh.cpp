@@ -284,7 +284,7 @@ ParallelMesh(uint64_t r, uint64_t n_x, uint64_t n_y, double cell_size,
       // append new mesh chunk to existing ones
        this->mesh_chunks.emplace
           (std::piecewise_construct,
-           std::forward_as_tuple(std::array<uint64_t,2>{q,p}),
+           std::forward_as_tuple(std::array<uint64_t,2>{p,q}),
            std::forward_as_tuple(this, m, n, this->h, pt, n_chunks_glob_x, n_chunks_glob_y,
                                 p + this->n_chunks_x * this->global_position[0],
                                 q + this->n_chunks_y * this->global_position[1],
@@ -462,6 +462,32 @@ LocalToGlobalPointIndices(const LocalCoordinates& loc) const{
 
   // return valid indices
   return {m, n};
+}
+
+bool ParallelMesh::is_chunk_in_parent_p_mesh(uint64_t chunk_i, uint64_t chunk_j){
+  bool owned_chunk = false;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == chunk_i && it_mesh_chunk.first[1] == chunk_j){
+      owned_chunk = true;
+    }
+  }
+  return owned_chunk;
+}
+
+PointTypeEnum ParallelMesh::get_chunk_point_type(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j) const{
+  bool owned_chunk = false;
+  PointTypeEnum result;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    if(it_mesh_chunk.first[0] == chunk_i && it_mesh_chunk.first[1] == chunk_j){
+      owned_chunk = true;
+      result = it_mesh_chunk.second.get_point_type(point_i, point_j);
+    }
+  }
+  if(!owned_chunk){
+    std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+    result = PointTypeEnum::INVALID;
+  }
+  return result;
 }
 
 double ParallelMesh::get_velocity_mesh_chunk_x(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j){

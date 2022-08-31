@@ -128,14 +128,10 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
     Kokkos::Timer timer2;
 
     // predict velocity without pressure
-    //this->predict_velocity();
-    double time_post_predict = timer2.seconds();
-    time_predictor_step += time_post_predict;
-
-    // predict velocity without pressure using MPI function
     MPI_Barrier(MPI_COMM_WORLD);
     this->parallel_mesh->pmesh_predict_velocity(this->delta_t, this->nu);
-
+    double time_post_predict = timer2.seconds();
+    time_predictor_step += time_post_predict;
 
     // Display velocity values in first iteration stopping point case
     if(s_p == stopping_point::AFTER_FIRST_ITERATION){
@@ -147,40 +143,49 @@ void Solver::solve(stopping_point s_p, linear_solver l_s, adaptative_time_step a
       }
     }
 
-    // assemble PPE RHS
-    this->new_assemble_poisson_RHS();
-    double time_post_RHS = timer2.seconds();
-    time_assemble_RHS += time_post_RHS - time_post_predict;
-    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout << " RHS:\n";
-      for(uint64_t k = 0; k < this->RHS.extent(0); k++){
-	std::cout << "  " << k << " : " << this->RHS(k) << std::endl;
+    double time_post_RHS;
+    double time_post_poisson_solve;
+    if(this->rank_identifier == 0){
+      // assemble PPE RHS
+      MPI_Barrier(MPI_COMM_WORLD);
+      this->new_assemble_poisson_RHS();
+      time_post_RHS = timer2.seconds();
+      time_assemble_RHS += time_post_RHS - time_post_predict;
+      if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+        std::cout << " RHS:\n";
+        for(uint64_t k = 0; k < this->RHS.extent(0); k++){
+  	std::cout << "  " << k << " : " << this->RHS(k) << std::endl;
+        }
       }
-    }
 
-    // solve PPE
-    this->new_poisson_solve_pressure(1e-2, l_s);
-    double time_post_poisson_solve = timer2.seconds();
-    time_poisson_solve += time_post_poisson_solve - time_post_RHS;
-    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout << " pressure:\n";
-      for(uint64_t j = 0; j < this->mesh_chunk->get_n_cells_y(); j++){
-	for(uint64_t i = 0; i < this->mesh_chunk->get_n_cells_x(); i++){
-	  std::cout << "  " << i << " " << j << " : " << this->mesh_chunk->get_pressure(i, j) << std::endl;
-	}
+      // solve PPE
+      this->new_poisson_solve_pressure(1e-2, l_s);
+      time_post_poisson_solve = timer2.seconds();
+      time_poisson_solve += time_post_poisson_solve - time_post_RHS;
+      if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+        std::cout << " pressure:\n";
+        for(uint64_t j = 0; j < this->mesh_chunk->get_n_cells_y(); j++){
+  	for(uint64_t i = 0; i < this->mesh_chunk->get_n_cells_x(); i++){
+  	  std::cout << "  " << i << " " << j << " : " << this->mesh_chunk->get_pressure(i, j) << std::endl;
+  	}
+        }
       }
     }
 
     // correct velocity with pressure
+    MPI_Barrier(MPI_COMM_WORLD);
     this->new_correct_velocity();
-    double time_post_correct = timer2.seconds();
-    time_corrector_step += time_post_correct - time_post_poisson_solve;
-    if(s_p == stopping_point::AFTER_FIRST_ITERATION){
-      std::cout << " corrected velocity:\n";
-      for(uint64_t j = 0; j < this->mesh_chunk->get_n_points_y(); j++){
-	for(uint64_t i = 0; i < this->mesh_chunk->get_n_points_x(); i++){
-	  std::cout << "  " << i << " " << j << " : " << this->mesh_chunk->get_velocity_x(i, j) << " , " << this->mesh_chunk->get_velocity_y(i, j) << std::endl;
-	}
+    double time_post_correct;
+    if(this->rank_identifier == 0){
+      time_post_correct = timer2.seconds();
+      time_corrector_step += time_post_correct - time_post_poisson_solve;
+      if(s_p == stopping_point::AFTER_FIRST_ITERATION){
+        std::cout << " corrected velocity:\n";
+        for(uint64_t j = 0; j < this->mesh_chunk->get_n_points_y(); j++){
+  	for(uint64_t i = 0; i < this->mesh_chunk->get_n_points_x(); i++){
+  	  std::cout << "  " << i << " " << j << " : " << this->mesh_chunk->get_velocity_x(i, j) << " , " << this->mesh_chunk->get_velocity_y(i, j) << std::endl;
+  	}
+        }
       }
     }
 
@@ -869,21 +874,24 @@ void Solver::new_correct_velocity(){
   uint64_t i_global;
   uint64_t j_global;
   for(uint64_t j_chunk = 0; j_chunk < this->n_p_mesh_y; j_chunk++){
-    for(uint64_t j = 0; j < this->parallel_mesh->get_n_points_y_mesh_chunk(0, j_chunk) - 1; j++){
+    for(uint64_t j = 0; j < this->parallel_mesh->get_n_points_y_mesh_chunk(0, j_chunk); j++){
       for(uint64_t i_chunk = 0; i_chunk < this->n_p_mesh_x; i_chunk++){
-        for(uint64_t i = 0; i < this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk) - 1; i++){
-          LocalCoordinates loc = {
-            {i_chunk, j_chunk},
-            {i, j}
-          };
-          i_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[0];
-          j_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[1];
-          p_tl = this->pressure(j_global * this->domain_size_x + i_global - 1);
-          p_tr = this->pressure(j_global * this->domain_size_x + i_global);
-          p_bl = this->pressure((j_global - 1) * this->domain_size_x + i_global - 1);
-          p_br = this->pressure((j_global - 1) * this->domain_size_x + i_global);
-          this->parallel_mesh->set_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j, (this->parallel_mesh->get_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j) - t_to_r * (p_tr - p_tl + p_br - p_bl) * factor));
-          this->parallel_mesh->set_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j, (this->parallel_mesh->get_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j) - t_to_r * (p_tr - p_br + p_tl - p_bl) * factor));
+        for(uint64_t i = 0; i < this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk); i++){
+          if((this->parallel_mesh->get_chunk_point_type(i_chunk, j_chunk, i, j) == PointTypeEnum::INTERIOR) || (this->parallel_mesh->get_chunk_point_type(i_chunk, j_chunk, i, j) == PointTypeEnum::SHARED_OWNED)) {
+            LocalCoordinates loc = {
+              {i_chunk, j_chunk},
+              {i, j}
+            };
+            i_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[0];
+            j_global = this->parallel_mesh->LocalToGlobalPointIndices(loc)[1];
+
+            p_tl = this->pressure(j_global * this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk) + i_global - 1);
+            p_tr = this->pressure(j_global * this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk) + i_global);
+            p_bl = this->pressure((j_global - 1) * this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk) + i_global - 1);
+            p_br = this->pressure((j_global - 1) * this->parallel_mesh->get_n_points_x_mesh_chunk(i_chunk, j_chunk) + i_global);
+            this->parallel_mesh->set_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j, (this->parallel_mesh->get_velocity_mesh_chunk_x(i_chunk, j_chunk, i, j) - t_to_r * (p_tr - p_tl + p_br - p_bl) * factor));
+            this->parallel_mesh->set_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j, (this->parallel_mesh->get_velocity_mesh_chunk_y(i_chunk, j_chunk, i, j) - t_to_r * (p_tr - p_br + p_tl - p_bl) * factor));
+          }
         }
       }
     }
@@ -891,13 +899,13 @@ void Solver::new_correct_velocity(){
 }
 
 double Solver::compute_cell_courant_number(int i, int j){
-  return (this->mesh_chunk->get_velocity_x(i, j) + this->mesh_chunk->get_velocity_y(i, j)) * this->delta_t / this->mesh_chunk->get_cell_size();
+  return (this->parallel_mesh->get_velocity_mesh_chunk_x(this->rank_identifier_cartesian[0], this->rank_identifier_cartesian[1], i, j) + this->parallel_mesh->get_velocity_mesh_chunk_y(this->rank_identifier_cartesian[0], this->rank_identifier_cartesian[1], i, j)) * this->delta_t / this->h;
 }
 
 double Solver::compute_global_courant_number(){
   double max_C = std::numeric_limits<int>::min();
-  for(int j = 1; j <= this->mesh_chunk->get_n_cells_y(); j++){
-    for(int i = 1; i <= this->mesh_chunk->get_n_cells_x(); i++){
+  for(int j = 1; j < this->domain_size_y; j++){ // incorrect loop
+    for(int i = 1; i < this->domain_size_x; i++){
       double c = this->compute_cell_courant_number(i, j);
       if(c > max_C){
 	max_C = c;

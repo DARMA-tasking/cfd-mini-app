@@ -100,11 +100,7 @@ set_point_type(uint64_t i, uint64_t j, PointTypeEnum t){
 
 PointTypeEnum MeshChunk::
 get_point_type(uint64_t i, uint64_t j) const{
-  // Return invalid type when indices are out of bounds
-  if(i < this->get_n_points_x() && j < this->get_n_points_y())
-    return this->point_type(i, j);
-  else
-    return PointTypeEnum::INVALID;
+  return this->point_type(i, j);
 }
 
 void MeshChunk::
@@ -121,14 +117,40 @@ set_velocity_y(uint64_t i, uint64_t j, double v){
 
 double MeshChunk::
 get_velocity_x(int64_t i, int64_t j) {
-	//std::cout << "////// getting velocity x " << "(i, j) : (" << i << ", " << j << ")" << '\n';
-	if(i < this->get_n_points_x() && j < this->get_n_points_y() && i > 0 && j > 0){
-		//std::cout << "//// Owned or shared point" << '\n';
-		if((this->get_point_type(i, j) == PointTypeEnum::INTERIOR) || (this->get_point_type(i, j) == PointTypeEnum::SHARED_OWNED))
-    	return this->velocity(i, j, 0);
-		else if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
-			if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
-				std::string boundary;
+	std::string boundary;
+	int64_t chunk_position_x;
+	int64_t chunk_position_y;
+	uint64_t local_point_coordinate_x;
+	uint64_t local_point_coordinate_y;
+	if(i < (this->get_n_points_x() - 1) && j < (this->get_n_points_y() - 1) && i > 0 && j > 0){
+		if(this->get_point_type(i, j) == PointTypeEnum::INTERIOR){
+			return this->velocity(i, j, 0);
+		}
+	}
+	else if(i == this->get_n_points_x() || j == this->get_n_points_y()){
+		chunk_position_x = this->global_position[0];
+		chunk_position_y = this->global_position[1];
+		local_point_coordinate_x = i;
+		local_point_coordinate_y = j;
+		if(i == this->get_n_points_x()){
+			chunk_position_x = this->global_position[0] + 1;
+			local_point_coordinate_x = 1;
+		}
+		if(j == this->get_n_points_y()){
+			chunk_position_y = this->global_position[1] + 1;
+			local_point_coordinate_y = 1;
+		}
+		if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+			return this->parent_parallel_mesh->get_velocity_mesh_chunk_x(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+		}
+		else{
+			std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+			return std::nan("");
+		}
+	}
+	else if(i == (this->get_n_points_x() - 1) || (j == this->get_n_points_y() - 1) || i == 0 || j == 0){
+		switch (static_cast<int>(this->get_point_type(i, j))) {
+			case static_cast<int>(PointTypeEnum::BOUNDARY):
 				if(j == this->get_n_points_y() - 1){
 					boundary = "v_x_t";
 				}
@@ -142,64 +164,92 @@ get_velocity_x(int64_t i, int64_t j) {
 					boundary = "v_x_b";
 				}
 				return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
-			}
+			case static_cast<int>(PointTypeEnum::SHARED_OWNED):
+				return this->velocity(i, j, 0);
+			case static_cast<int>(PointTypeEnum::GHOST):
+				if(i == 0 && j == 0){
+					chunk_position_x = this->global_position[0] - 1;
+					chunk_position_y = this->global_position[1] - 1;
+					if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+						local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						return this->parent_parallel_mesh->get_velocity_mesh_chunk_x(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+					}
+					else{
+						std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+						return std::nan("");
+					}
+				}
+				else if(i == 0 && j != 0){
+					chunk_position_x = this->global_position[0] - 1;
+					chunk_position_y = this->global_position[1];
+					if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+						local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						local_point_coordinate_y = j;
+						return this->parent_parallel_mesh->get_velocity_mesh_chunk_x(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+					}
+					else{
+						std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+						return std::nan("");
+					}
+				}
+				else if(i != 0 && j == 0){
+					chunk_position_x = this->global_position[0];
+					chunk_position_y = this->global_position[1] - 1;
+					if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+						local_point_coordinate_x = i;
+						local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						return this->parent_parallel_mesh->get_velocity_mesh_chunk_x(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+					}
+					else{
+						std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+						return std::nan("");
+					}
+				}
 		}
 
 	}
-	else{
-		//std::cout << "//// Not owned" << '\n';
-		if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
-			std::string boundary;
-			if(j == this->get_n_points_y() - 1){
-				boundary = "v_x_t";
-			}
-			if(i == this->get_n_points_x() - 1){
-				boundary = "v_x_r";
-			}
-			if(i == 0){
-				boundary = "v_x_l";
-			}
-			if(j == 0){
-				boundary = "v_x_b";
-			}
-			return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
-		}
-		int64_t chunk_position_x = this->global_position[0];
-		int64_t chunk_position_y = this->global_position[1];
-		uint64_t local_point_coordinate_x = i;
-		uint64_t local_point_coordinate_y = j;
-		if(i == this->get_n_points_x() + 1){
-			chunk_position_x = this->global_position[0] + 1;
-			local_point_coordinate_x = 1;
-		}
-		if(j == this->get_n_points_y() + 1){
-			chunk_position_y = this->global_position[1] + 1;
-			local_point_coordinate_y = 1;
-		}
-		if(i == 0){
-			chunk_position_x = this->global_position[0] - 1;
-			local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
-		}
-		if(j == 0){
-			chunk_position_y = this->global_position[1] - 1;
-			local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
-		}
-
-		return this->parent_parallel_mesh->get_velocity_mesh_chunk_x(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
-	}
-	std::cout << "Error in x velocity get" << '\n';
+	std::cout << "error in x velocity get" << '\n';
+	std::cout << "i, j requested : " << i << ", " << j << '\n';
 	return std::nan("");
 }
 
 double MeshChunk::
 get_velocity_y(int64_t i, int64_t j) {
-	//std::cout << "////// getting velocity y " << "(i, j) : (" << i << ", " << j << ")" << '\n';
-	if(i < this->get_n_points_x() && j < this->get_n_points_y() && i > 0 && j > 0){
-		if((this->get_point_type(i, j) == PointTypeEnum::INTERIOR) || (this->get_point_type(i, j) == PointTypeEnum::SHARED_OWNED))
-    	return this->velocity(i, j, 0);
-		else if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
-			if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
-				std::string boundary;
+	std::string boundary;
+	int64_t chunk_position_x;
+	int64_t chunk_position_y;
+	uint64_t local_point_coordinate_x;
+	uint64_t local_point_coordinate_y;
+	if(i < (this->get_n_points_x() - 1) && j < (this->get_n_points_y() - 1) && i > 0 && j > 0){
+		if(this->get_point_type(i, j) == PointTypeEnum::INTERIOR){
+			return this->velocity(i, j, 1);
+		}
+	}
+	else if(i == this->get_n_points_x() || j == this->get_n_points_y()){
+		chunk_position_x = this->global_position[0];
+		chunk_position_y = this->global_position[1];
+		local_point_coordinate_x = i;
+		local_point_coordinate_y = j;
+		if(i == this->get_n_points_x()){
+			chunk_position_x = this->global_position[0] + 1;
+			local_point_coordinate_x = 1;
+		}
+		if(j == this->get_n_points_y()){
+			chunk_position_y = this->global_position[1] + 1;
+			local_point_coordinate_y = 1;
+		}
+		if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+			return this->parent_parallel_mesh->get_velocity_mesh_chunk_y(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+		}
+		else{
+			std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+			return std::nan("");
+		}
+	}
+	else if(i == (this->get_n_points_x() - 1) || (j == this->get_n_points_y() - 1) || i == 0 || j == 0){
+		switch (static_cast<int>(this->get_point_type(i, j))) {
+			case static_cast<int>(PointTypeEnum::BOUNDARY):
 				if(j == this->get_n_points_y() - 1){
 					boundary = "v_y_t";
 				}
@@ -213,53 +263,53 @@ get_velocity_y(int64_t i, int64_t j) {
 					boundary = "v_y_b";
 				}
 				return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
-			}
-		}
-	}
-	else{
-		//std::cout << "//// Not owned" << '\n';
-		if(this->get_point_type(i, j) == PointTypeEnum::BOUNDARY){
-			std::string boundary;
-			if(j == this->get_n_points_y() - 1){
-				boundary = "v_y_t";
-			}
-			if(i == this->get_n_points_x() - 1){
-				boundary = "v_y_r";
-			}
-			if(i == 0){
-				boundary = "v_y_l";
-			}
-			if(j == 0){
-				boundary = "v_y_b";
-			}
-			return this->parent_parallel_mesh->get_boundary_velocity_value(boundary);
-		}
-		int64_t chunk_position_x = this->global_position[0];
-		int64_t chunk_position_y = this->global_position[1];
-		uint64_t local_point_coordinate_x = i;
-		uint64_t local_point_coordinate_y = j;
-		//std::cout << "//// Chunk position : (" << chunk_position_x << ", " << chunk_position_y << ")" << '\n';
-		//std::cout << "//// Local point coordinates : (" << local_point_coordinate_x << ", " << local_point_coordinate_y << ")" << '\n';
-		if(i == this->get_n_points_x() + 1){
-			chunk_position_x = this->global_position[0] + 1;
-			local_point_coordinate_x = 1;
-		}
-		if(j == this->get_n_points_y() + 1){
-			chunk_position_y = this->global_position[1] + 1;
-			local_point_coordinate_y = 1;
-		}
-		if(i == 0){
-			chunk_position_x = this->global_position[0] - 1;
-			local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
-		}
-		if(j == 0){
-			chunk_position_y = this->global_position[1] - 1;
-			local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+			case static_cast<int>(PointTypeEnum::SHARED_OWNED):
+				return this->velocity(i, j, 1);
+			case static_cast<int>(PointTypeEnum::GHOST):
+				if(i == 0 && j == 0){
+					chunk_position_x = this->global_position[0] - 1;
+					chunk_position_y = this->global_position[1] - 1;
+					if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+						local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						return this->parent_parallel_mesh->get_velocity_mesh_chunk_y(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+					}
+					else{
+						std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+						return std::nan("");
+					}
+				}
+				else if(i == 0 && j != 0){
+					chunk_position_x = this->global_position[0] - 1;
+					chunk_position_y = this->global_position[1];
+					if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+						local_point_coordinate_x = this->parent_parallel_mesh->get_n_points_x_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						local_point_coordinate_y = j;
+						return this->parent_parallel_mesh->get_velocity_mesh_chunk_y(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+					}
+					else{
+						std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+						return std::nan("");
+					}
+				}
+				else if(i != 0 && j == 0){
+					chunk_position_x = this->global_position[0];
+					chunk_position_y = this->global_position[1] - 1;
+					if(this->parent_parallel_mesh->is_chunk_in_parent_p_mesh(chunk_position_x, chunk_position_y)){
+						local_point_coordinate_x = i;
+						local_point_coordinate_y = this->parent_parallel_mesh->get_n_points_y_mesh_chunk(chunk_position_x, chunk_position_y) - 1;
+						return this->parent_parallel_mesh->get_velocity_mesh_chunk_y(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
+					}
+					else{
+						std::cout << "/!\\ Warning : Chunk not owned, MPI exchange here" << '\n';
+						return std::nan("");
+					}
+				}
 		}
 
-		return this->parent_parallel_mesh->get_velocity_mesh_chunk_y(chunk_position_x, chunk_position_y, local_point_coordinate_x, local_point_coordinate_y);
 	}
-	std::cout << "Error in y velocity get" << '\n';
+	std::cout << "error in y velocity get" << '\n';
+	std::cout << "i, j requested : " << i << ", " << j << '\n';
 	return std::nan("");
 }
 

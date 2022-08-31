@@ -23,8 +23,8 @@ int main(int argc, char** argv) {
   uint64_t n_c_y = 32;
   uint64_t n_parallel_meshes_x = 1;
   uint64_t n_parallel_meshes_y = 1;
-  uint64_t n_colors_x = 1;
-  uint64_t n_colors_y = 1;
+  uint64_t n_colors_x = 3;
+  uint64_t n_colors_y = 3;
   std::cout << "Input parameters:"
 	    << "\n  density: " << density
 	    << "\n  dynamic viscosity: " << dynamic_viscosity
@@ -49,9 +49,6 @@ int main(int argc, char** argv) {
     {PointIndexEnum::EDGE_2, PointTypeEnum::BOUNDARY},
     {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
   };
-  auto mesh = std::make_shared<MeshChunk>
-    (nullptr, n_c_x, n_c_y, cell_size, point_types,
-    n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {
@@ -64,6 +61,20 @@ int main(int argc, char** argv) {
     {"v_x_r", 0.0},
     {"v_y_r", 0.0}
   };
+
+  ParallelMesh pmesh(0, n_c_x, n_c_y,
+                        cell_size, n_colors_x, n_colors_y, static_cast<int>(LocationIndexEnum::SINGLE),
+                        n_colors_x,
+                        n_colors_y,
+                        velocity_values,
+                        0, 0,
+                        0, 0);
+
+  auto mesh = std::make_shared<MeshChunk>
+    (&pmesh, n_c_x, n_c_y, cell_size, point_types,
+    n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
+
+
   BoundaryConditions b_c(mesh, velocity_values);
 
   // run numerical scheme

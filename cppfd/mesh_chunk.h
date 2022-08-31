@@ -138,4 +138,7 @@ class MeshChunk
 
     // mesh cell data
     Kokkos::View<double*> pressure = {};
+
+    // storage for bordering velocity values
+    std::map<Border, Kokkos::View<double*[2]>> border_velocities = {};
 };

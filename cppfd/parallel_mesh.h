@@ -65,6 +65,7 @@ class ParallelMesh
     void set_velocity_mesh_chunk_y(uint64_t, uint64_t, uint64_t, uint64_t, double);
     uint64_t get_n_points_x_mesh_chunk(uint64_t, uint64_t);
     uint64_t get_n_points_y_mesh_chunk(uint64_t, uint64_t);
+    PointTypeEnum get_chunk_point_type(uint64_t, uint64_t, uint64_t, uint64_t) const;
 
     // global to local indexing converters
     LocalCoordinates GlobalToLocalCellIndices(uint64_t, uint64_t) const;
@@ -73,6 +74,9 @@ class ParallelMesh
     // local to global indexing converters
     std::array<uint64_t,2> LocalToGlobalCellIndices(const LocalCoordinates&) const;
     std::array<uint64_t,2> LocalToGlobalPointIndices(const LocalCoordinates&) const;
+
+    // condition verifiers for mesh chunk assignements
+    bool is_chunk_in_parent_p_mesh(uint64_t, uint64_t);
 
     // apply boundary conditions
     void apply_velocity_bc();
@@ -119,9 +123,6 @@ class ParallelMesh
 
     // boundary velocity values
     std::map<std::string, double> boundary_velocity_values;
-
-    // storage for bordering velocity values
-    std::map<Border, Kokkos::View<double*[2]>> border_velocities = {};
 
     // rank identifier of parallel mesh
     uint64_t rank;
