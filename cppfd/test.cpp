@@ -5,9 +5,9 @@
 
 #include <Kokkos_Core.hpp>
 
-#include "mesh_chunk.cpp"
-#include "boundary_conditions.cpp"
-#include "solver.cpp"
+#include "mesh_chunk.h"
+#include "boundary_conditions.h"
+#include "solver.h"
 
 int main(int argc, char** argv) {
   // handle Kokkos boilerplate
@@ -19,8 +19,12 @@ int main(int argc, char** argv) {
   double delta_t = 0.001;
   double t_final = 0.1;
   double max_C = 0.5;
-  uint64_t n_c_x = 35;
-  uint64_t n_c_y = 35;
+  uint64_t n_c_x = 32;
+  uint64_t n_c_y = 32;
+  uint64_t n_parallel_meshes_x = 1;
+  uint64_t n_parallel_meshes_y = 1;
+  uint64_t n_colors_x = 3;
+  uint64_t n_colors_y = 3;
   std::cout << "Input parameters:"
 	    << "\n  density: " << density
 	    << "\n  dynamic viscosity: " << dynamic_viscosity
@@ -45,8 +49,6 @@ int main(int argc, char** argv) {
     {PointIndexEnum::EDGE_2, PointTypeEnum::BOUNDARY},
     {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
   };
-  auto mesh = std::make_shared<MeshChunk>
-    (n_c_x, n_c_y, cell_size, point_types);
 
   // define boundary conditions
   std::map<std::string, double> velocity_values = {
@@ -59,10 +61,24 @@ int main(int argc, char** argv) {
     {"v_x_r", 0.0},
     {"v_y_r", 0.0}
   };
+
+  ParallelMesh pmesh(0, n_c_x, n_c_y,
+                        cell_size, n_colors_x, n_colors_y, static_cast<int>(LocationIndexEnum::SINGLE),
+                        n_colors_x,
+                        n_colors_y,
+                        velocity_values,
+                        0, 0,
+                        0, 0);
+
+  auto mesh = std::make_shared<MeshChunk>
+    (&pmesh, n_c_x, n_c_y, cell_size, point_types,
+    n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
+
+
   BoundaryConditions b_c(mesh, velocity_values);
 
   // run numerical scheme
-  Solver solver(mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1);
+  Solver solver(mesh, velocity_values, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1, n_c_x, n_c_y, cell_size, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
   solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
   #ifdef OUTPUT_VTK_FILES

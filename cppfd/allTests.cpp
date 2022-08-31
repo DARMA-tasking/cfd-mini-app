@@ -4,9 +4,9 @@
 #include <Kokkos_Core.hpp>
 #include <gtest/gtest.h>
 
-#include "mesh_chunk.cpp"
-#include "boundary_conditions.cpp"
-#include "solver.cpp"
+#include "mesh_chunk.h"
+#include "boundary_conditions.h"
+#include "solver.h"
 
 struct solver_test : testing::Test{
   std::unique_ptr<Solver> solver;
@@ -20,6 +20,10 @@ struct solver_test : testing::Test{
     double t_final = 0.1;
     double max_C = 0.5;
     uint64_t n_cells = 3;
+    uint64_t n_parallel_meshes_x = 1;
+    uint64_t n_parallel_meshes_y = 1;
+    uint64_t n_colors_x = 1;
+    uint64_t n_colors_y = 1;
 
     // create mesh
     std::map<PointIndexEnum, PointTypeEnum> point_types = {
@@ -33,7 +37,8 @@ struct solver_test : testing::Test{
       {PointIndexEnum::EDGE_3, PointTypeEnum::BOUNDARY}
     };
     auto mesh = std::make_shared<MeshChunk>
-      (n_cells, n_cells, 1. / n_cells, point_types);
+      (nullptr, n_cells, n_cells, 1. / n_cells, point_types,
+      n_parallel_meshes_x * n_colors_x, n_parallel_meshes_y * n_colors_y);
 
     // define boundary conditions
     std::map<std::string, double> velocity_values = {
@@ -50,7 +55,7 @@ struct solver_test : testing::Test{
 
     // instantiate solver
     this->solver = std::make_unique<Solver>
-      (mesh, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0);
+      (mesh, velocity_values, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 0, 25, 25, 1, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
   }
 };
 
