@@ -59,8 +59,8 @@ class ParallelMesh
     uint8_t get_location_type() const { return this->location_type; }
 
     // getters and setters for attributes in specific mesh chunks
-    double get_velocity_mesh_chunk_x(uint64_t, uint64_t, uint64_t, uint64_t);
-    double get_velocity_mesh_chunk_y(uint64_t, uint64_t, uint64_t, uint64_t);
+    double get_velocity_mesh_chunk_x(uint64_t, uint64_t, uint64_t, uint64_t) const;
+    double get_velocity_mesh_chunk_y(uint64_t, uint64_t, uint64_t, uint64_t) const;
     void set_velocity_mesh_chunk_x(uint64_t, uint64_t, uint64_t, uint64_t, double);
     void set_velocity_mesh_chunk_y(uint64_t, uint64_t, uint64_t, uint64_t, double);
     uint64_t get_n_points_x_mesh_chunk(uint64_t, uint64_t);

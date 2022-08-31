@@ -490,7 +490,7 @@ PointTypeEnum ParallelMesh::get_chunk_point_type(uint64_t chunk_i, uint64_t chun
   return result;
 }
 
-double ParallelMesh::get_velocity_mesh_chunk_x(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j){
+double ParallelMesh::get_velocity_mesh_chunk_x(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j) const {
   bool owned_chunk = false;
   double result;
   for (auto& it_mesh_chunk : this->mesh_chunks){
@@ -506,7 +506,7 @@ double ParallelMesh::get_velocity_mesh_chunk_x(uint64_t chunk_i, uint64_t chunk_
   return result;
 }
 
-double ParallelMesh::get_velocity_mesh_chunk_y(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j){
+double ParallelMesh::get_velocity_mesh_chunk_y(uint64_t chunk_i, uint64_t chunk_j, uint64_t point_i, uint64_t point_j) const {
   bool owned_chunk = false;
   double result;
   for (auto& it_mesh_chunk : this->mesh_chunks){

@@ -76,8 +76,8 @@ class MeshChunk
     double get_pressure(uint64_t i, uint64_t j) const;
     void set_velocity_x(uint64_t i, uint64_t j, double u);
     void set_velocity_y(uint64_t i, uint64_t j, double v);
-    double get_velocity_x(int64_t i, int64_t j);
-    double get_velocity_y(int64_t i, int64_t j);
+    double get_velocity_x(int64_t i, int64_t j) const;
+    double get_velocity_y(int64_t i, int64_t j) const;
 
     // setter to assign new mesh point data
     void set_velocity(Kokkos::View<double**[2]> v) { this->velocity = v; }

@@ -116,7 +116,7 @@ set_velocity_y(uint64_t i, uint64_t j, double v){
 }
 
 double MeshChunk::
-get_velocity_x(int64_t i, int64_t j) {
+get_velocity_x(int64_t i, int64_t j) const {
 	std::string boundary;
 	int64_t chunk_position_x;
 	int64_t chunk_position_y;
@@ -215,7 +215,7 @@ get_velocity_x(int64_t i, int64_t j) {
 }
 
 double MeshChunk::
-get_velocity_y(int64_t i, int64_t j) {
+get_velocity_y(int64_t i, int64_t j) const{
 	std::string boundary;
 	int64_t chunk_position_x;
 	int64_t chunk_position_y;
@@ -503,7 +503,7 @@ make_VTK_uniform_grid() const{
   for(uint64_t j = 0; j < n_p_y; j++){
     for(uint64_t i = 0; i < n_p_x; i++){
       point_type->SetTuple1(j * n_p_x + i, static_cast<int>(this->point_type(i, j)));
-      point_data->SetTuple3(j * n_p_x + i, this->velocity(i, j, 0), this->velocity(i, j, 1), 0);
+			point_data->SetTuple3(j * n_p_x + i, this->get_velocity_x(i, j), this->get_velocity_y(i, j), 0);
     }
   }
   ug->GetPointData()->SetScalars(point_type);
