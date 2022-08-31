@@ -84,11 +84,17 @@ class ParallelMesh
     // get Reynolds number across parallel mesh
     double get_reynolds_l();
 
+    // compute max courant number across all owned chunks
+    double compute_global_courant_number();
+
     // get specific boundary velocity value
     double get_boundary_velocity_value(std::string);
 
     // predict velocity in all owned mesh chunks
     void pmesh_predict_velocity(double, double);
+
+    // synchronize chunk borders of velocities
+    void receive_border_velocities();
 
     // writer to VTK files
     std::string write_vtm(const std::string&) const;

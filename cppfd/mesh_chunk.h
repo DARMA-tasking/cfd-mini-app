@@ -35,7 +35,7 @@ enum struct PointTypeEnum : int8_t {
   INVALID = 4
 };
 
-enum struct Border : int8_t {
+enum struct BorderTypeEnum : int8_t {
   BOTTOM = 0,
   LEFT = 1,
   RIGHT = 2,
@@ -91,6 +91,15 @@ class MeshChunk
     // predict velocity for points in mesh chunk
     void chunk_predict_velocity(double delta_t, double nu);
 
+    // replace old bordering velocity values with new ones
+    void receive_all_border_velocities();
+    void receive_border_velocities_x(BorderTypeEnum);
+    void receive_border_velocities_y(BorderTypeEnum);
+
+    // compute max courant number across chunk cells
+    double compute_cell_courant_number(uint64_t, uint64_t);
+    double compute_global_courant_number();
+
     #ifdef USE_MPI
     // mpi sends to other mesh chunk
     void mpi_send_border_velocity_x(double border_velocity_x, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border);
@@ -140,5 +149,5 @@ class MeshChunk
     Kokkos::View<double*> pressure = {};
 
     // storage for bordering velocity values
-    std::map<Border, Kokkos::View<double*[2]>> border_velocities = {};
+    std::map<BorderTypeEnum, Kokkos::View<double*[2]>> border_velocities = {};
 };

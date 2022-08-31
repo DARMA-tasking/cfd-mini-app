@@ -898,21 +898,8 @@ void Solver::new_correct_velocity(){
   }
 }
 
-double Solver::compute_cell_courant_number(int i, int j){
-  return (this->parallel_mesh->get_velocity_mesh_chunk_x(this->rank_identifier_cartesian[0], this->rank_identifier_cartesian[1], i, j) + this->parallel_mesh->get_velocity_mesh_chunk_y(this->rank_identifier_cartesian[0], this->rank_identifier_cartesian[1], i, j)) * this->delta_t / this->h;
-}
-
 double Solver::compute_global_courant_number(){
-  double max_C = std::numeric_limits<int>::min();
-  for(int j = 1; j < this->domain_size_y; j++){ // incorrect loop
-    for(int i = 1; i < this->domain_size_x; i++){
-      double c = this->compute_cell_courant_number(i, j);
-      if(c > max_C){
-	max_C = c;
-      }
-    }
-  }
-  return max_C;
+  return this->parallel_mesh->compute_global_courant_number() * this->delta_t / this->h;
 }
 
 double Solver::get_velocity_bc_max_norm(std::map<std::string, double> velocity_values){

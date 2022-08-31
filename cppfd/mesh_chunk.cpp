@@ -422,6 +422,38 @@ void MeshChunk::chunk_predict_velocity(double delta_t, double nu){
   }
 }
 
+void MeshChunk::receive_all_border_velocities(){
+  for(auto& it_border_velocity : this->border_velocities){
+		this->receive_border_velocities_x(it_border_velocity.first);
+		this->receive_border_velocities_y(it_border_velocity.first);
+  }
+}
+
+void MeshChunk::receive_border_velocities_x(BorderTypeEnum border){
+}
+
+void MeshChunk::receive_border_velocities_y(BorderTypeEnum border){
+}
+
+double MeshChunk::compute_cell_courant_number(uint64_t i, uint64_t j){
+	return (this->get_velocity_x(i, j) + this->get_velocity_y(i, j));
+}
+
+double MeshChunk::compute_global_courant_number(){
+	double max_C = std::numeric_limits<int>::min();
+	for(int j = 0; j < this->get_n_points_y(); j++){ // incorrect loop
+    for(int i = 0; i < this->get_n_points_x(); i++){
+			if((this->get_point_type(i, j) == PointTypeEnum::INTERIOR) || (this->get_point_type(i, j) == PointTypeEnum::SHARED_OWNED)) {
+	      double c = this->compute_cell_courant_number(i, j);
+	      if(c > max_C){
+					max_C = c;
+	      }
+			}
+    }
+  }
+	return max_C;
+}
+
 #ifdef USE_MPI
 void MeshChunk::
 mpi_send_border_velocity_x(double border_velocity_x, uint64_t pos_x, uint64_t pos_y, uint64_t dest_rank, uint8_t border) {

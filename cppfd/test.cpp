@@ -79,7 +79,7 @@ int main(int argc, char** argv) {
 
   // run numerical scheme
   Solver solver(mesh, velocity_values, b_c, delta_t, t_final, density, dynamic_viscosity, max_C, 1, n_c_x, n_c_y, cell_size, n_parallel_meshes_x, n_parallel_meshes_y, n_colors_x, n_colors_y);
-  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::OFF);
+  solver.solve(Solver::stopping_point::NONE, Solver::linear_solver::GAUSS_SEIDEL, Solver::adaptative_time_step::ON);
 
   #ifdef OUTPUT_VTK_FILES
   // save results

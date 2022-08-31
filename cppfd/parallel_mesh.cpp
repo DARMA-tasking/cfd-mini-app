@@ -610,6 +610,24 @@ void ParallelMesh::pmesh_predict_velocity(double delta_t, double nu){
   }
 }
 
+void ParallelMesh::receive_border_velocities(){
+  for(auto& it_mesh_chunk : this->mesh_chunks){
+    it_mesh_chunk.second.receive_all_border_velocities();
+  }
+}
+
+double ParallelMesh::compute_global_courant_number(){
+  double max_C = std::numeric_limits<int>::min();
+  double c;
+  for (auto& it_mesh_chunk : this->mesh_chunks){
+    c = it_mesh_chunk.second.compute_global_courant_number();
+    if(c > max_C){
+      max_C = c;
+    }
+  }
+  return max_C;
+}
+
 #ifdef OUTPUT_VTK_FILES
 std::string ParallelMesh::
 write_vtm(const std::string& file_name) const{
