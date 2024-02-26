@@ -211,4 +211,50 @@ write_vti(const std::string& file_name) const{
   // return fill name with extension
   return full_file_name;
 }
+
+std::string MeshChunk::
+write_txt(const std::string& file_name, const std::string& output_type) const{
+  // assemble full file name with extension
+  std::string full_file_name = file_name + ".txt";
+
+	uint64_t nx = this->n_cells_x;
+  uint64_t ny = this->n_cells_y;
+
+  ofstream file;
+  file.open(full_file_name);
+
+  if(!file){
+    std::cout << "Error in creating text file" << std::endl;
+  }
+
+  if(output_type == "velocity"){
+    for(int j = ny; j > - 1; j--){
+      for(int i = 0; i < nx + 1; i++){
+        file << this->get_velocity_x(i, j) << " " << this->get_velocity_y(i, j) << "\n";
+      }
+    }
+  }
+  else if(output_type == "pressure"){
+    for(int j = ny; j > - 1; j--){
+      for(int i = 0; i < nx + 1; i++){
+        file << this->get_pressure(i, j) << "\n";
+      }
+    }
+  }
+  else{
+    std::cout << "Unrecognized output type" << '\n';
+  }
+
+  //closing the file
+  file.close();
+  if(file){
+		std::cout << std::endl
+		    << "Created text file : \""
+		    << full_file_name<<"\""
+		    << std::endl;
+  }
+
+	// return fill name with extension
+  return full_file_name;
+}
 #endif

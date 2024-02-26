@@ -78,6 +78,9 @@ class MeshChunk
     // writer to VTK file
     std::string write_vti(const std::string& file_name) const;
 
+    // writer to txt file of velocity values
+    std::string write_txt(const std::string& file_name, const std::string& output_type) const;
+
   private:
     // physical origin of the mesh block
     std::array<double,2> origin;

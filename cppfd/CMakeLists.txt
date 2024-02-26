@@ -9,6 +9,7 @@ include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 # Setting options
 option(OUTPUT_VTK_FILES "When OFF allows for a non-VTK build" OFF)
+option(OUTPUT_TXT_FILES "When OFF allows for a text output" OFF)
 
 # Find required dependencies
 find_package(Kokkos REQUIRED)

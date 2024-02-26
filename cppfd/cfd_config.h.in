@@ -1,2 +1,3 @@
 #pragma once
+#cmakedefine OUTPUT_TXT_FILES
 #cmakedefine OUTPUT_VTK_FILES
